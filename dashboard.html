@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HeadCheck VR – Fleet Dashboard</title>
+<script src="headcheck-core.js"></script>
+<style>
+  .viz-root {
+    color-scheme: light;
+    --page: #f9f9f9; --surface-1: #ffffff; --text-primary: #191919; --text-secondary: #666666;
+    --grid: #e7e7e7; --axis: #c2c2c2; --border: rgba(11,11,11,0.10);
+    --series-1: #257de0; --series-2: #f47230; --band-fill: rgba(37,125,224,0.08); --band-fill-l: rgba(244,114,48,0.10);
+    --good: #0a7d1c; --good-bg: #e5f5e8; --warn: #9a5b00; --warn-bg: #fff3df; --bad: #b8282a; --bad-bg: #fde8e8;
+    --accent: #1b64be; --on-accent: #ffffff;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:where(:not([data-theme="light"])) .viz-root {
+      color-scheme: dark;
+      --page: #0b0b0b; --surface-1: #191919; --text-primary: #efefef; --text-secondary: #9c9c9c;
+      --grid: #303030; --axis: #474747; --border: rgba(255,255,255,0.10);
+      --series-1: #338ced; --series-2: #e76624; --band-fill: rgba(51,140,237,0.12); --band-fill-l: rgba(231,102,36,0.14);
+      --good: #53c556; --good-bg: #173a1c; --warn: #fbb315; --warn-bg: #3a2c0c; --bad: #eb6263; --bad-bg: #3d1717;
+      --accent: #6aabf1; --on-accent: #0b0b0b;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; }
+  .viz-root { background: var(--page); color: var(--text-primary); min-height: 100vh;
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif; padding: 24px; }
+  .wrap { max-width: 1120px; margin: 0 auto; }
+  h1 { font-size: 22px; margin: 0; } h2 { font-size: 15px; margin: 0 0 2px; }
+  .sub { color: var(--text-secondary); font-size: 13px; margin: 4px 0 0; }
+  .bar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin: 18px 0; }
+  button, .filebtn { font: inherit; font-size: 14px; padding: 8px 14px; border-radius: 8px; border: 1px solid var(--accent);
+    background: var(--surface-1); color: var(--accent); cursor: pointer; }
+  button.primary, .filebtn { background: var(--accent); color: var(--on-accent); }
+  .filebtn input { display: none; }
+  .ctl { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-secondary); }
+  select { font: inherit; font-size: 14px; padding: 6px 8px; border-radius: 8px; border: 1px solid var(--axis); background: var(--surface-1); color: var(--text-primary); }
+  input[type=range] { width: 140px; }
+  .card { background: var(--surface-1); border: 1px solid var(--border); border-radius: 12px; padding: 16px; margin-bottom: 16px; }
+  .drop { border: 2px dashed var(--axis); border-radius: 12px; padding: 28px; text-align: center; color: var(--text-secondary); font-size: 14px; }
+  .drop.over { border-color: var(--accent); color: var(--accent); }
+  .tiles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 16px; }
+  .tile { background: var(--surface-1); border: 1px solid var(--border); border-radius: 12px; padding: 14px; }
+  .tile .k { font-size: 12px; color: var(--text-secondary); }
+  .tile .v { font-size: 28px; font-weight: 600; margin-top: 4px; }
+  .tile .d { font-size: 12px; color: var(--text-secondary); margin-top: 4px; line-height: 1.35; }
+  .swatch { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; vertical-align: 0; }
+  .head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 8px; flex-wrap: wrap; }
+  .legend { display: flex; gap: 14px; font-size: 12px; color: var(--text-secondary); align-items: center; flex-wrap: wrap; }
+  svg text { font-family: system-ui, -apple-system, "Segoe UI", sans-serif; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { text-align: left; padding: 8px 6px; border-bottom: 1px solid var(--grid); }
+  th { color: var(--text-secondary); font-weight: 600; font-size: 12px; }
+  td.n { font-variant-numeric: tabular-nums; }
+  tbody tr { cursor: pointer; } tbody tr:hover { background: var(--band-fill); } tbody tr.sel { outline: 2px solid var(--accent); outline-offset: -2px; }
+  .pill { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 12px; font-weight: 600; white-space: nowrap; }
+  .pill.safe { background: var(--good-bg); color: var(--good); } .pill.coach { background: var(--warn-bg); color: var(--warn); } .pill.risk { background: var(--bad-bg); color: var(--bad); }
+  .sim { font-size: 11px; color: var(--text-secondary); border: 1px solid var(--axis); border-radius: 4px; padding: 1px 4px; margin-left: 4px; }
+  #tip { position: fixed; pointer-events: none; background: var(--surface-1); color: var(--text-primary); border: 1px solid var(--border);
+    box-shadow: 0 4px 14px rgba(0,0,0,.12); border-radius: 8px; padding: 8px 10px; font-size: 12px; display: none; z-index: 20; line-height: 1.45; }
+  .empty { color: var(--text-secondary); font-size: 14px; padding: 30px 0; text-align: center; }
+  .note { font-size: 12px; color: var(--text-secondary); margin-top: 8px; line-height: 1.45; }
+  .hidden { display: none !important; }
+  @media (max-width: 800px) { .tiles { grid-template-columns: repeat(2, 1fr); } .viz-root { padding: 14px; } }
+</style>
+</head>
+<body>
+<div class="viz-root">
+<div class="wrap">
+  <h1>HeadCheck VR – Fleet dashboard</h1>
+  <p class="sub">Load the result files from riders' phones. Compare experienced and new riders and inspect each rider's head movement.</p>
+
+  <div class="bar">
+    <label class="filebtn">Load result files (.json)<input id="files" type="file" accept=".json,application/json" multiple></label>
+    <button id="demo">Load demo data (simulated riders)</button>
+    <button id="csv">Export table (CSV)</button>
+    <button id="clear">Clear</button>
+    <span class="ctl">Shoulder-check threshold
+      <input id="thr" type="range" min="30" max="90" step="5" value="60"> <b id="thrVal">60°</b></span>
+  </div>
+
+  <div id="drop" class="drop">Drag and drop rider result files here</div>
+
+  <div id="main" class="hidden">
+    <div class="tiles">
+      <div class="tile"><div class="k">Riders loaded</div><div class="v" id="kN">–</div><div class="d" id="kNd"></div></div>
+      <div class="tile"><div class="k"><span class="swatch" style="background:var(--series-1)"></span>Experienced – mean score</div><div class="v" id="kA">–</div><div class="d" id="kAd"></div></div>
+      <div class="tile"><div class="k"><span class="swatch" style="background:var(--series-2)"></span>New / non-rider – mean score</div><div class="v" id="kB">–</div><div class="d" id="kBd"></div></div>
+      <div class="tile"><div class="k">Does the test separate the groups?</div><div class="v" id="kP">–</div><div class="d" id="kPd"></div></div>
+    </div>
+
+    <div class="card">
+      <div class="head">
+        <div><h2>Group comparison</h2><div class="sub">Each dot is one rider · the bar marks the group mean</div></div>
+        <div class="ctl">Metric
+          <select id="metric">
+            <option value="overall">Overall score (0–100)</option>
+            <option value="headCheckPct">Shoulder checks done (%)</option>
+            <option value="hazardPct">Hazards spotted (%)</option>
+            <option value="meanTapRtMs">Mean tap reaction (s)</option>
+            <option value="meanCheckLeadS">How early they check (s before manoeuvre)</option>
+          </select>
+        </div>
+      </div>
+      <svg id="dots" width="100%" height="200" role="img" aria-label="Dot plot comparing groups"></svg>
+    </div>
+
+    <div class="card">
+      <div class="head">
+        <div><h2 id="tlTitle">Head movement – select a rider</h2><div class="sub" id="tlSub">Click a row in the table below</div></div>
+        <div class="legend">
+          <span><span class="swatch" style="background:var(--band-fill);border:1px solid var(--series-1);border-radius:2px"></span>Window to check right</span>
+          <span><span class="swatch" style="background:var(--band-fill-l);border:1px solid var(--series-2);border-radius:2px"></span>Window to check left</span>
+          <span>▲ hazard appears · ● tap</span>
+        </div>
+      </div>
+      <svg id="tl" width="100%" height="300" role="img" aria-label="Head yaw over time for the selected rider"></svg>
+      <p class="note">Up = looking right, down = looking left. The dashed lines are the shoulder-check threshold. A check counts only if the line crosses the threshold on the correct side inside the shaded window (between the voice prompt and the manoeuvre).</p>
+    </div>
+
+    <div class="card">
+      <h2>Riders</h2>
+      <table>
+        <thead><tr><th>Rider</th><th>Group</th><th>Score</th><th>Band</th><th>Checks</th><th>Near misses</th><th>Hazards</th><th>Mean tap RT</th><th>Horn → look</th><th>False taps</th></tr></thead>
+        <tbody id="rows"></tbody>
+      </table>
+      <p class="note" id="method"></p>
+    </div>
+  </div>
+</div>
+</div>
+<div id="tip"></div>
+
+<script>
+(function () {
+  'use strict';
+  var HC = window.HC, $ = function (id) { return document.getElementById(id); };
+  var NS = 'http://www.w3.org/2000/svg';
+  var GROUPS = ['Experienced rider', 'New / non-rider'];
+  var GCOL = ['var(--series-1)', 'var(--series-2)'];
+  var raw = [];        // records as loaded (with series)
+  var rows = [];       // re-scored at the current threshold
+  var selected = null;
+
+  // ------------------------------------------------------------ loading
+  function addRecords(list) {
+    list.forEach(function (r) {
+      if (!r || r.app !== 'HeadCheck VR' || !r.series || !r.events) return;
+      raw = raw.filter(function (x) { return !(x.riderId === r.riderId && x.startedAt === r.startedAt); });
+      raw.push(r);
+    });
+    rescore();
+  }
+  function readFiles(files) {
+    var pending = files.length, out = [], bad = 0;
+    Array.prototype.forEach.call(files, function (f) {
+      var fr = new FileReader();
+      fr.onload = function () { try { out.push(JSON.parse(fr.result)); } catch (e) { bad++; } if (--pending === 0) done(); };
+      fr.readAsText(f);
+    });
+    function done() { addRecords(out); if (bad) alert(bad + ' file(s) could not be read as HeadCheck results.'); }
+  }
+  $('files').onchange = function (e) { readFiles(e.target.files); e.target.value = ''; };
+  var drop = $('drop');
+  ['dragenter', 'dragover'].forEach(function (t) { document.addEventListener(t, function (e) { e.preventDefault(); drop.classList.add('over'); }); });
+  ['dragleave', 'drop'].forEach(function (t) { document.addEventListener(t, function (e) { e.preventDefault(); drop.classList.remove('over'); }); });
+  document.addEventListener('drop', function (e) { if (e.dataTransfer.files.length) readFiles(e.dataTransfer.files); });
+  $('demo').onclick = function () {
+    var list = [];
+    for (var i = 1; i <= 6; i++) list.push(HC.simulateRider('experienced', i, 'SIM-E' + i));
+    for (var j = 1; j <= 6; j++) list.push(HC.simulateRider('new', 100 + j, 'SIM-N' + j));
+    addRecords(list);
+  };
+  $('clear').onclick = function () { raw = []; rows = []; selected = null; render(); };
+  $('thr').oninput = function () { $('thrVal').textContent = this.value + '°'; rescore(); };
+  $('metric').onchange = render;
+
+  function rescore() {
+    var thr = +$('thr').value;
+    rows = raw.map(function (r) { return HC.evaluateRide(r, { checkDeg: thr }); });
+    rows.sort(function (a, b) { return b.scores.overall - a.scores.overall; });
+    if (selected && !rows.some(function (r) { return key(r) === selected; })) selected = null;
+    if (!selected && rows.length) selected = key(rows[0]);
+    render();
+  }
+  function key(r) { return r.riderId + '|' + r.startedAt; }
+  function groupIdx(r) { return /experienced/i.test(r.group) ? 0 : 1; }
+
+  // ------------------------------------------------------------ helpers
+  function el(tag, attrs, parent, text) {
+    var n = document.createElementNS(NS, tag);
+    for (var k in attrs) n.setAttribute(k, attrs[k]);
+    if (text != null) n.textContent = text;
+    if (parent) parent.appendChild(n);
+    return n;
+  }
+  function clear(svg) { while (svg.firstChild) svg.removeChild(svg.firstChild); }
+  var tip = $('tip');
+  function showTip(html, ev) { tip.innerHTML = html; tip.style.display = 'block'; moveTip(ev); }
+  function moveTip(ev) {
+    var x = ev.clientX + 14, y = ev.clientY + 14, w = tip.offsetWidth, h = tip.offsetHeight;
+    if (x + w > innerWidth - 8) x = ev.clientX - w - 14;
+    if (y + h > innerHeight - 8) y = ev.clientY - h - 14;
+    tip.style.left = x + 'px'; tip.style.top = y + 'px';
+  }
+  function hideTip() { tip.style.display = 'none'; }
+  function niceTicks(min, max, n) {
+    var span = max - min || 1, step = Math.pow(10, Math.floor(Math.log10(span / n))), err = span / n / step;
+    step *= err >= 7.5 ? 10 : err >= 3 ? 5 : err >= 1.5 ? 2 : 1;
+    var out = []; for (var v = Math.ceil(min / step) * step; v <= max + 1e-9; v += step) out.push(+v.toFixed(6));
+    return out;
+  }
+  function metricValue(r, m) {
+    var v = r.scores[m];
+    if (v == null) return null;
+    return m === 'meanTapRtMs' ? v / 1000 : v;
+  }
+  function fmt(v, m) {
+    if (v == null) return '–';
+    if (m === 'meanTapRtMs' || m === 'meanCheckLeadS') return v.toFixed(2) + ' s';
+    if (m === 'overall') return String(Math.round(v));
+    return Math.round(v) + '%';
+  }
+
+  // ------------------------------------------------------------ render
+  function render() {
+    var has = rows.length > 0;
+    $('main').classList.toggle('hidden', !has);
+    drop.classList.toggle('hidden', has);
+    if (!has) return;
+    renderTiles(); renderDots(); renderTable(); renderTimeline();
+  }
+
+  function renderTiles() {
+    var A = rows.filter(function (r) { return groupIdx(r) === 0; }).map(function (r) { return r.scores.overall; });
+    var B = rows.filter(function (r) { return groupIdx(r) === 1; }).map(function (r) { return r.scores.overall; });
+    var sims = rows.filter(function (r) { return r.simulated; }).length;
+    $('kN').textContent = rows.length;
+    $('kNd').textContent = A.length + ' experienced · ' + B.length + ' new' + (sims ? ' · ' + sims + ' simulated' : '');
+    $('kA').textContent = A.length ? Math.round(HC.mean(A)) : '–';
+    $('kAd').textContent = A.length > 1 ? 'SD ' + HC.sd(A).toFixed(1) + ' · n = ' + A.length : 'n = ' + A.length;
+    $('kB').textContent = B.length ? Math.round(HC.mean(B)) : '–';
+    $('kBd').textContent = B.length > 1 ? 'SD ' + HC.sd(B).toFixed(1) + ' · n = ' + B.length : 'n = ' + B.length;
+    var w = HC.welchTest(A, B);
+    if (!w) { $('kP').textContent = '–'; $('kPd').textContent = 'Needs at least 2 riders in each group.'; return; }
+    var p = w.p < 0.001 ? 'p < 0.001' : 'p = ' + w.p.toFixed(3);
+    $('kP').textContent = w.p < 0.05 ? 'Yes' : 'Not yet';
+    $('kPd').textContent = 'Welch t = ' + w.t.toFixed(2) + ', df = ' + w.df.toFixed(1) + ', ' + p +
+      ' · Cohen\'s d = ' + (w.cohenD == null ? '–' : w.cohenD.toFixed(2)) + (A.length + B.length < 12 ? ' · small sample, treat as a pilot' : '');
+  }
+
+  function renderDots() {
+    var svg = $('dots'); clear(svg);
+    var m = $('metric').value, W = svg.clientWidth || 900, H = 200, L = 140, R = 30, T = 16, Bm = 36;
+    svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
+    var vals = rows.map(function (r) { return metricValue(r, m); }).filter(function (v) { return v != null; });
+    var lo, hi;
+    if (m === 'overall' || m === 'headCheckPct' || m === 'hazardPct') { lo = 0; hi = 100; }
+    else { lo = 0; hi = Math.max(1, Math.ceil(Math.max.apply(null, vals.concat([1])) * 1.15 * 2) / 2); }
+    var x = function (v) { return L + (v - lo) / (hi - lo) * (W - L - R); };
+    niceTicks(lo, hi, 6).forEach(function (t) {
+      el('line', { x1: x(t), x2: x(t), y1: T, y2: H - Bm, stroke: 'var(--grid)', 'stroke-width': 1 }, svg);
+      el('text', { x: x(t), y: H - Bm + 18, 'text-anchor': 'middle', 'font-size': 11, fill: 'var(--text-secondary)' }, svg, fmt(t, m).replace('.00', ''));
+    });
+    var rowH = (H - T - Bm) / 2;
+    GROUPS.forEach(function (g, gi) {
+      var cy = T + rowH * gi + rowH / 2;
+      el('text', { x: 0, y: cy + 4, 'font-size': 13, fill: 'var(--text-primary)', 'font-weight': 600 }, svg, gi === 0 ? 'Experienced' : 'New / non-rider');
+      var gRows = rows.filter(function (r) { return groupIdx(r) === gi && metricValue(r, m) != null; });
+      var gv = gRows.map(function (r) { return metricValue(r, m); });
+      if (gv.length) {
+        var mu = HC.mean(gv);
+        el('line', { x1: x(mu), x2: x(mu), y1: cy - 22, y2: cy + 22, stroke: 'var(--text-primary)', 'stroke-width': 2, 'stroke-linecap': 'round' }, svg);
+        el('text', { x: x(mu), y: cy - 27, 'text-anchor': 'middle', 'font-size': 11, fill: 'var(--text-secondary)' }, svg, 'mean ' + fmt(mu, m));
+      }
+      // stack identical values so every rider stays visible
+      var seen = {};
+      gRows.forEach(function (r) {
+        var v = metricValue(r, m), k2 = Math.round(x(v) / 6), n = seen[k2] = (seen[k2] || 0) + 1;
+        var dy = (n % 2 ? 1 : -1) * Math.floor(n / 2) * 9;
+        var c = el('circle', { cx: x(v), cy: cy + dy, r: 5.5, fill: GCOL[gi], stroke: 'var(--surface-1)', 'stroke-width': 2 }, svg);
+        if (key(r) === selected) c.setAttribute('stroke', 'var(--text-primary)');
+        var hit = el('circle', { cx: x(v), cy: cy + dy, r: 12, fill: 'transparent', style: 'cursor:pointer' }, svg);
+        hit.addEventListener('mousemove', function (ev) { showTip('<b>' + r.riderId + '</b>' + (r.simulated ? ' (simulated)' : '') + '<br>' + r.group + '<br>' + $('metric').selectedOptions[0].text + ': <b>' + fmt(v, m) + '</b>', ev); });
+        hit.addEventListener('mouseleave', hideTip);
+        hit.addEventListener('click', function () { selected = key(r); render(); });
+      });
+    });
+    el('line', { x1: L, x2: W - R, y1: H - Bm, y2: H - Bm, stroke: 'var(--axis)', 'stroke-width': 1 }, svg);
+  }
+
+  function renderTimeline() {
+    var svg = $('tl'); clear(svg);
+    var r = rows.filter(function (x) { return key(x) === selected; })[0];
+    if (!r) return;
+    var thr = r.settingsUsed.checkDeg;
+    $('tlTitle').textContent = 'Head movement – ' + r.riderId + (r.simulated ? ' (simulated)' : '');
+    $('tlSub').textContent = r.group + ' · score ' + r.scores.overall + ' · ' + r.scores.checksDone + '/' + r.scores.checksExpected + ' checks · ' + r.scores.hazardsSpotted + '/' + r.scores.hazardsTotal + ' hazards';
+    var W = svg.clientWidth || 900, H = 300, L = 46, R = 16, T = 26, B = 30;
+    svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
+    var tMax = r.series.t[r.series.t.length - 1] || 1;
+    var x = function (t) { return L + t / tMax * (W - L - R); }, y = function (v) { return T + (120 - v) / 240 * (H - T - B); };
+    // manoeuvre windows
+    r.manoeuvres.forEach(function (m) {
+      if (m.promptT == null || m.actionT == null) return;
+      var right = m.side === 'right';
+      el('rect', { x: x(m.promptT), y: T, width: Math.max(1, x(m.actionT) - x(m.promptT)), height: H - T - B,
+        fill: right ? 'var(--band-fill)' : 'var(--band-fill-l)' }, svg);
+      el('text', { x: (x(m.promptT) + x(m.actionT)) / 2, y: T - 8, 'text-anchor': 'middle', 'font-size': 11,
+        fill: m.checked ? 'var(--good)' : 'var(--bad)', 'font-weight': 600 }, svg, m.id + (right ? ' →' : ' ←') + (m.checked ? ' ✓' : ' ✕'));
+    });
+    [-120, -60, 0, 60, 120].forEach(function (v) {
+      el('line', { x1: L, x2: W - R, y1: y(v), y2: y(v), stroke: v === 0 ? 'var(--axis)' : 'var(--grid)', 'stroke-width': 1 }, svg);
+      el('text', { x: L - 8, y: y(v) + 4, 'text-anchor': 'end', 'font-size': 11, fill: 'var(--text-secondary)' }, svg, (v > 0 ? '+' : '') + v + '°');
+    });
+    [thr, -thr].forEach(function (v) {
+      el('line', { x1: L, x2: W - R, y1: y(v), y2: y(v), stroke: 'var(--text-secondary)', 'stroke-width': 1, 'stroke-dasharray': '4 4' }, svg);
+    });
+    el('text', { x: W - R, y: y(thr) - 5, 'text-anchor': 'end', 'font-size': 11, fill: 'var(--text-secondary)' }, svg, 'check threshold ±' + thr + '°');
+    niceTicks(0, tMax, 8).forEach(function (t) {
+      el('text', { x: x(t), y: H - B + 18, 'text-anchor': 'middle', 'font-size': 11, fill: 'var(--text-secondary)' }, svg, t + ' s');
+    });
+    // yaw line
+    var d = '';
+    for (var i = 0; i < r.series.t.length; i += 2) {
+      var v = Math.max(-120, Math.min(120, r.series.yaw[i]));
+      d += (i ? 'L' : 'M') + x(r.series.t[i]).toFixed(1) + ' ' + y(v).toFixed(1);
+    }
+    el('path', { d: d, fill: 'none', stroke: 'var(--series-1)', 'stroke-width': 2, 'stroke-linejoin': 'round' }, svg);
+    // hazards + taps
+    r.hazards.forEach(function (h) {
+      if (h.onsetT == null) return;
+      el('path', { d: 'M' + x(h.onsetT) + ' ' + (H - B) + 'l-5 9h10z', fill: h.responded ? 'var(--good)' : 'var(--bad)' }, svg);
+    });
+    (r.taps || []).forEach(function (t) {
+      el('circle', { cx: x(t), cy: H - B - 6, r: 4, fill: 'var(--text-primary)', stroke: 'var(--surface-1)', 'stroke-width': 2 }, svg);
+    });
+    // crosshair hover
+    var cross = el('line', { x1: 0, x2: 0, y1: T, y2: H - B, stroke: 'var(--text-secondary)', 'stroke-width': 1, visibility: 'hidden' }, svg);
+    var dot = el('circle', { r: 4.5, fill: 'var(--series-1)', stroke: 'var(--surface-1)', 'stroke-width': 2, visibility: 'hidden' }, svg);
+    var hit = el('rect', { x: L, y: T, width: W - L - R, height: H - T - B, fill: 'transparent' }, svg);
+    hit.addEventListener('mousemove', function (ev) {
+      var box = svg.getBoundingClientRect(), px = (ev.clientX - box.left) * (W / box.width);
+      var t = Math.max(0, Math.min(tMax, (px - L) / (W - L - R) * tMax));
+      var idx = Math.min(r.series.t.length - 1, Math.round(t * (r.settings.sampleHz || 20)));
+      while (idx > 0 && r.series.t[idx] > t) idx--;
+      var v = r.series.yaw[idx], xv = x(r.series.t[idx]);
+      cross.setAttribute('x1', xv); cross.setAttribute('x2', xv); cross.setAttribute('visibility', 'visible');
+      dot.setAttribute('cx', xv); dot.setAttribute('cy', y(Math.max(-120, Math.min(120, v)))); dot.setAttribute('visibility', 'visible');
+      var inWin = r.manoeuvres.filter(function (m) { return t >= m.promptT && t <= m.actionT; })[0];
+      var hz = r.hazards.filter(function (h) { return t >= h.onsetT && t <= h.onsetT + 4; })[0];
+      showTip('<b>' + r.series.t[idx].toFixed(1) + ' s</b><br>Head: <b>' + Math.abs(v).toFixed(0) + '° ' + (v > 1 ? 'right' : v < -1 ? 'left' : 'ahead') + '</b>' +
+        (inWin ? '<br>' + inWin.label + ' – ' + (inWin.checked ? 'checked ' + inWin.leadTimeS.toFixed(1) + ' s early' : 'no check') : '') +
+        (hz ? '<br>Hazard: ' + hz.label : ''), ev);
+    });
+    hit.addEventListener('mouseleave', function () { hideTip(); cross.setAttribute('visibility', 'hidden'); dot.setAttribute('visibility', 'hidden'); });
+  }
+
+  function renderTable() {
+    var tb = $('rows'); tb.innerHTML = '';
+    rows.forEach(function (r) {
+      var s = r.scores, b = HC.bandFor(s.overall), icon = b.key === 'safe' ? '✓' : b.key === 'coach' ? '!' : '✕';
+      var tr = document.createElement('tr');
+      if (key(r) === selected) tr.className = 'sel';
+      tr.innerHTML = '<td><b>' + esc(r.riderId) + '</b>' + (r.simulated ? '<span class="sim">SIM</span>' : '') + '</td>' +
+        '<td><span class="swatch" style="background:' + GCOL[groupIdx(r)] + '"></span>' + esc(r.group) + '</td>' +
+        '<td class="n"><b>' + s.overall + '</b></td>' +
+        '<td><span class="pill ' + b.key + '">' + icon + ' ' + b.label + '</span></td>' +
+        '<td class="n">' + s.checksDone + '/' + s.checksExpected + '</td>' +
+        '<td class="n">' + s.nearMisses + '</td>' +
+        '<td class="n">' + s.hazardsSpotted + '/' + s.hazardsTotal + '</td>' +
+        '<td class="n">' + (s.meanTapRtMs != null ? (s.meanTapRtMs / 1000).toFixed(2) + ' s' : '–') + '</td>' +
+        '<td class="n">' + (s.hornLookMs != null ? (s.hornLookMs / 1000).toFixed(2) + ' s' : '–') + '</td>' +
+        '<td class="n">' + s.falseTaps + '</td>';
+      tr.onclick = function () { selected = key(r); render(); };
+      tb.appendChild(tr);
+    });
+    $('method').textContent = 'Score = 50% shoulder checks + 50% hazards spotted − 5 per false tap. A shoulder check = head turned ≥ ' + $('thr').value +
+      '° toward the manoeuvre side for ≥ 0.1 s between the voice prompt and the manoeuvre. Moving the threshold slider re-scores every rider, which shows how robust the group difference is.';
+  }
+  function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+
+  // ------------------------------------------------------------ CSV export
+  $('csv').onclick = function () {
+    if (!rows.length) return;
+    var head = ['riderId', 'group', 'yearsRiding', 'simulated', 'startedAt', 'mode', 'thresholdDeg', 'overall', 'band', 'checksDone', 'checksExpected',
+      'nearMisses', 'meanCheckLeadS', 'hazardsSpotted', 'hazardsTotal', 'meanTapRtMs', 'hornLookMs', 'falseTaps', 'yawSD', 'pctTimeLookingAway30']
+      .concat(rows[0].manoeuvres.map(function (m) { return m.id + '_checked'; }))
+      .concat(rows[0].hazards.map(function (h) { return h.id + '_rtMs'; }));
+    var lines = [head.join(',')];
+    rows.forEach(function (r) {
+      var s = r.scores;
+      var vals = [r.riderId, r.group, r.yearsRiding, !!r.simulated, r.startedAt, r.mode, r.settingsUsed.checkDeg, s.overall, s.band, s.checksDone, s.checksExpected,
+        s.nearMisses, s.meanCheckLeadS, s.hazardsSpotted, s.hazardsTotal, s.meanTapRtMs, s.hornLookMs, s.falseTaps, r.scan.yawSD, r.scan.pctTimeLookingAway30]
+        .concat(r.manoeuvres.map(function (m) { return m.checked ? 1 : 0; }))
+        .concat(r.hazards.map(function (h) { return h.rtMs; }));
+      lines.push(vals.map(function (v) { v = v == null ? '' : String(v); return /[",]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; }).join(','));
+    });
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([lines.join('\n')], { type: 'text/csv' }));
+    a.download = 'headcheck_results.csv'; document.body.appendChild(a); a.click();
+    setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+  };
+
+  window.addEventListener('resize', function () { if (rows.length) { renderDots(); renderTimeline(); } });
+  render();
+})();
+</script>
+</body>
+</html>

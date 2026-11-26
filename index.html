@@ -1,0 +1,775 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>HeadCheck VR – Rider Safety Test</title>
+<script src="https://aframe.io/releases/1.6.0/aframe.min.js"></script>
+<script src="headcheck-core.js"></script>
+<style>
+  :root { --ink:#191919; --ink2:#5c5c5c; --line:#e2e2e2; --accent:#1b64be; --bg:#f6f7f9; --good:#0a7d1c; --warn:#a86400; --bad:#c42b2c; }
+  * { box-sizing: border-box; }
+  body { margin:0; font-family: system-ui, -apple-system, "Segoe UI", sans-serif; color: var(--ink); }
+  .overlay { position:fixed; inset:0; z-index:10; background:var(--bg); overflow:auto; padding:20px 16px 40px; }
+  .card { max-width:560px; margin:0 auto; background:#fff; border:1px solid var(--line); border-radius:14px; padding:20px; }
+  h1 { font-size:22px; margin:0 0 4px; } h2 { font-size:16px; margin:18px 0 8px; }
+  .sub { color:var(--ink2); font-size:14px; margin:0 0 16px; line-height:1.45; }
+  label { display:block; font-size:13px; font-weight:600; margin:12px 0 4px; }
+  input[type=text], input[type=number], select { width:100%; padding:10px; font-size:15px; border:1px solid #cfcfcf; border-radius:8px; background:#fff; }
+  .check { display:flex; gap:8px; align-items:flex-start; font-weight:400; font-size:14px; line-height:1.4; }
+  .check input { margin-top:3px; width:18px; height:18px; }
+  button { font: inherit; font-size:16px; padding:12px 16px; border-radius:10px; border:1px solid var(--accent); cursor:pointer; }
+  .primary { background:var(--accent); color:#fff; width:100%; margin-top:16px; font-weight:600; }
+  .secondary { background:#fff; color:var(--accent); width:100%; margin-top:10px; }
+  .row { display:flex; gap:10px; } .row > * { flex:1; }
+  .status { font-size:13px; padding:8px 10px; border-radius:8px; margin-top:14px; background:#eef4fb; color:#174a86; }
+  .status.bad { background:#fdeeee; color:#8f1d1e; }
+  ol.steps { padding-left:20px; font-size:14px; line-height:1.55; color:var(--ink2); }
+  .err { color:var(--bad); font-size:13px; min-height:18px; margin-top:6px; }
+  .score { font-size:56px; font-weight:700; line-height:1; margin:8px 0 4px; }
+  .band { display:inline-flex; gap:6px; align-items:center; font-weight:600; padding:4px 10px; border-radius:999px; font-size:14px; }
+  .band.safe { background:#e5f5e8; color:var(--good); } .band.coach { background:#fff3df; color:var(--warn); } .band.risk { background:#fde8e8; color:var(--bad); }
+  .tiles { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-top:14px; }
+  .tile { border:1px solid var(--line); border-radius:10px; padding:10px; }
+  .tile b { display:block; font-size:20px; } .tile span { font-size:12px; color:var(--ink2); }
+  table { width:100%; border-collapse:collapse; font-size:13px; margin-top:6px; }
+  td, th { text-align:left; padding:7px 4px; border-bottom:1px solid var(--line); vertical-align:top; }
+  th { color:var(--ink2); font-weight:600; font-size:12px; }
+  td.num { font-variant-numeric: tabular-nums; white-space:nowrap; }
+  .yes { color:var(--good); font-weight:600; } .no { color:var(--bad); font-weight:600; }
+  .note { font-size:12px; color:var(--ink2); margin-top:10px; line-height:1.4; }
+  #desktopHint { position:fixed; left:12px; bottom:12px; z-index:5; background:rgba(0,0,0,.65); color:#fff; font-size:13px; padding:8px 12px; border-radius:8px; display:none; }
+  .hidden { display:none !important; }
+</style>
+</head>
+<body>
+
+<!-- ============================== SETUP SCREEN ============================== -->
+<div id="setup" class="overlay">
+  <div class="card">
+    <h1>HeadCheck VR</h1>
+    <p class="sub">A 2½-minute virtual delivery ride. It measures whether a rider checks over their shoulder before turning or changing lane, and how fast they spot hazards.</p>
+
+    <label for="riderId">Rider ID</label>
+    <input id="riderId" type="text" placeholder="e.g. R01" autocomplete="off">
+    <div class="row">
+      <div>
+        <label for="group">Group</label>
+        <select id="group">
+          <option>Experienced rider</option>
+          <option>New / non-rider</option>
+        </select>
+      </div>
+      <div>
+        <label for="years">Years riding</label>
+        <input id="years" type="number" min="0" max="60" value="0">
+      </div>
+    </div>
+    <label for="mode">Mode</label>
+    <select id="mode">
+      <option value="test">Test (no feedback) – for the study</option>
+      <option value="train">Training (with warnings) – for demos</option>
+    </select>
+    <label class="check"><input id="consent" type="checkbox"> The rider agreed to take part, knows they can stop at any time, and will stop if they feel dizzy or sick.</label>
+    <div class="err" id="formErr"></div>
+
+    <div class="status" id="xrStatus">Checking VR support…</div>
+    <button class="primary" id="btnVR">Start in VR headset</button>
+    <button class="secondary" id="btnFlat">Try without headset (phone or laptop)</button>
+
+    <h2>Say this to the rider</h2>
+    <ol class="steps">
+      <li>"Ride as you normally would on a real road."</li>
+      <li>"Tap the headset button as soon as you spot a hazard."</li>
+      <li>Do <b>not</b> mention shoulder checks – the test measures what they do naturally.</li>
+    </ol>
+    <h2>Operator steps</h2>
+    <ol class="steps">
+      <li>Seat the rider on a swivel chair so they can turn freely.</li>
+      <li>Tap <b>Start in VR headset</b>, put the phone in the Procus, hand it over.</li>
+      <li>The rider looks straight ahead and taps (or waits 8 s) to begin.</li>
+      <li>When the ride ends, take the phone out and save the result.</li>
+    </ol>
+  </div>
+</div>
+
+<!-- ============================== RESULTS SCREEN ============================== -->
+<div id="results" class="overlay hidden">
+  <div class="card">
+    <h1 id="resTitle">Ride complete</h1>
+    <p class="sub" id="resSub"></p>
+    <div class="score" id="resScore">–</div>
+    <div class="band" id="resBand"></div>
+    <div class="tiles">
+      <div class="tile"><b id="tCheck">–</b><span>shoulder checks done</span></div>
+      <div class="tile"><b id="tHaz">–</b><span>hazards spotted</span></div>
+      <div class="tile"><b id="tRt">–</b><span>mean tap reaction</span></div>
+    </div>
+    <h2>Manoeuvres</h2>
+    <table><thead><tr><th>Manoeuvre</th><th>Checked?</th><th>How early</th><th>Max turn</th></tr></thead><tbody id="manBody"></tbody></table>
+    <h2>Hazards</h2>
+    <table><thead><tr><th>Hazard</th><th>Spotted?</th><th>Reaction</th></tr></thead><tbody id="hazBody"></tbody></table>
+    <p class="note" id="resNote"></p>
+    <button class="primary" id="btnSave">Download result file (.json)</button>
+    <button class="secondary" id="btnShare">Share result file (WhatsApp, Drive, email…)</button>
+    <button class="secondary" id="btnAgain">New rider</button>
+    <p class="note">Score = 50% shoulder checks + 50% hazards spotted − 5 points per tap when no hazard was present. Open <b>dashboard.html</b> on a PC to compare riders.</p>
+  </div>
+</div>
+
+<div id="desktopHint">Drag to look around · <b>Space</b> = tap · Esc = stop</div>
+
+<!-- ============================== VR SCENE ============================== -->
+<a-scene id="scene" embedded style="position:fixed; inset:0;"
+  renderer="antialias: true; colorManagement: true"
+  xr-mode-ui="enabled: false" vr-mode-ui="enabled: false"
+  webxr="referenceSpaceType: local"
+  loading-screen="enabled: false"
+  fog="type: linear; color: #d8e6ef; near: 35; far: 170"
+  background="color: #cfe2ee">
+  <a-entity light="type: hemisphere; color: #ffffff; groundColor: #7a7466; intensity: 1.1"></a-entity>
+  <a-entity light="type: directional; color: #fff4e0; intensity: 0.9" position="-40 80 30"></a-entity>
+
+  <!-- rig = the scooter. It moves along the route; the rider's head turns inside it. -->
+  <a-entity id="rig">
+    <a-entity id="seat" position="0 1.3 0">
+      <a-entity id="cam" camera="userHeight: 0; fov: 80; near: 0.05" look-controls="magicWindowTrackingEnabled: true; touchEnabled: false; pointerLockEnabled: false"></a-entity>
+    </a-entity>
+    <!-- prompts float in front of the scooter (body-anchored, so head turns don't drag them) -->
+    <a-entity id="hudBg" geometry="primitive: plane; width: 3.4; height: 0.7" material="color: #0d1b2a; opacity: 0.72; transparent: true; shader: flat" position="0 1.95 -3.5" visible="false"></a-entity>
+    <a-entity id="hud" position="0 1.95 -3.49" text="value: ; align: center; width: 3.2; color: #ffffff; wrapCount: 26; font: roboto"></a-entity>
+  </a-entity>
+</a-scene>
+
+<script>
+/* =========================================================================
+   HeadCheck VR – ride page
+   ========================================================================= */
+(function () {
+  'use strict';
+  var THREE = AFRAME.THREE;
+  var HC = window.HC;
+  var Q = new URLSearchParams(location.search);
+  var SPEED = parseFloat(Q.get('speed')) || HC.DEFAULTS.speed;
+  var CHECK_DEG = parseFloat(Q.get('check')) || HC.DEFAULTS.checkDeg;
+  var VOICE = Q.get('voice') !== '0';
+  var SC = HC.SCENARIO;
+  var PATH = HC.buildPath(SC.segments);
+  var RAD = 180 / Math.PI;
+
+  var sceneEl = document.getElementById('scene');
+  var rigEl = document.getElementById('rig');
+  var seatEl = document.getElementById('seat');
+  var camEl = document.getElementById('cam');
+  var hudEl = document.getElementById('hud');
+  var hudBgEl = document.getElementById('hudBg');
+  var $ = function (id) { return document.getElementById(id); };
+
+  // ---------------------------------------------------------------- state
+  var S = {
+    phase: 'setup',          // setup | ready | riding | done
+    mode: 'test', inVR: false, viewMode: 'flat',
+    t: 0, s: 0, nextSample: 0, readySince: 0,
+    samples: { t: [], yaw: [] }, taps: [], lastTapAt: -1,
+    man: [], haz: [], actors: [], ambient: [], lastAmbientT: 0,
+    meta: null, result: null
+  };
+
+  // ---------------------------------------------------------------- helpers
+  function mat(color) { return new THREE.MeshLambertMaterial({ color: color }); }
+  function box(w, h, d, color) { return new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat(color)); }
+  function cyl(r, h, color) { return new THREE.Mesh(new THREE.CylinderGeometry(r, r, h, 12), mat(color)); }
+  function sph(r, color) { return new THREE.Mesh(new THREE.SphereGeometry(r, 12, 10), mat(color)); }
+  function rng(seed) { return HC.mulberry32(seed); }
+
+  /** Place an object on the route: s, lateral (m to the right), rel = heading relative to route (rad, +right). */
+  function placeOnRoute(obj, s, lateral, rel, y) {
+    var p = HC.poseAt(PATH, s, lateral);
+    obj.position.set(p.x, y || 0, p.z);
+    obj.rotation.set(0, -(p.h + (rel || 0)), 0);
+  }
+  /** Like placeOnRoute but keeps going straight past a junction (for vehicles that do not turn). */
+  function placeStraightThrough(obj, s, lateral, fromS) {
+    if (s <= fromS) return placeOnRoute(obj, s, lateral, 0);
+    var p = HC.poseAt(PATH, fromS - 0.001, lateral);
+    var d = s - fromS;
+    obj.position.set(p.x + Math.sin(p.h) * d, 0, p.z - Math.cos(p.h) * d);
+    obj.rotation.set(0, -p.h, 0);
+  }
+
+  // ---------------------------------------------------------------- models (forward = -z)
+  function makeCar(color) {
+    var g = new THREE.Group();
+    var body = box(1.8, 0.75, 4.2, color); body.position.y = 0.65; g.add(body);
+    var cab = box(1.6, 0.6, 2.2, color); cab.position.set(0, 1.3, 0.25); g.add(cab);
+    var glass = box(1.62, 0.42, 0.05, '#2b3a46'); glass.position.set(0, 1.32, -0.87); g.add(glass);
+    [[-0.85, -1.35], [0.85, -1.35], [-0.85, 1.35], [0.85, 1.35]].forEach(function (w) {
+      var wh = cyl(0.33, 0.25, '#1c1c1c'); wh.rotation.z = Math.PI / 2; wh.position.set(w[0], 0.33, w[1]); g.add(wh);
+    });
+    return g;
+  }
+  function makeBike(color, helmet) {
+    var g = new THREE.Group();
+    var body = box(0.35, 0.45, 1.5, color); body.position.y = 0.6; g.add(body);
+    [-0.6, 0.6].forEach(function (z) { var w = cyl(0.3, 0.12, '#1c1c1c'); w.rotation.z = Math.PI / 2; w.position.set(0, 0.3, z); g.add(w); });
+    var torso = box(0.42, 0.6, 0.28, '#3b5b8a'); torso.position.set(0, 1.2, 0.1); g.add(torso);
+    var head = sph(0.16, helmet || '#d33'); head.position.set(0, 1.65, 0.05); g.add(head);
+    var bag = box(0.45, 0.45, 0.45, '#e8a317'); bag.position.set(0, 1.15, 0.55); g.add(bag); // delivery box
+    return g;
+  }
+  function makeCycle() {
+    var g = new THREE.Group();
+    [-0.5, 0.5].forEach(function (z) { var w = cyl(0.33, 0.05, '#222'); w.rotation.z = Math.PI / 2; w.position.set(0, 0.33, z); g.add(w); });
+    var frame = box(0.06, 0.06, 1.0, '#2a7f62'); frame.position.y = 0.6; g.add(frame);
+    var torso = box(0.38, 0.6, 0.25, '#e0e0e0'); torso.position.set(0, 1.15, 0.05); g.add(torso);
+    var head = sph(0.13, '#5a3d2b'); head.position.set(0, 1.58, 0); g.add(head);
+    return g;
+  }
+  function makePerson(shirt) {
+    var g = new THREE.Group();
+    var legs = box(0.34, 0.85, 0.22, '#2f3542'); legs.position.y = 0.43; g.add(legs);
+    var torso = cyl(0.22, 0.7, shirt); torso.position.y = 1.2; g.add(torso);
+    var head = sph(0.13, '#7a5236'); head.position.y = 1.68; g.add(head);
+    return g;
+  }
+  function makeDog() {
+    var g = new THREE.Group();
+    var body = box(0.28, 0.3, 0.8, '#b07a45'); body.position.y = 0.45; g.add(body);
+    var head = box(0.22, 0.22, 0.28, '#b07a45'); head.position.set(0, 0.62, -0.5); g.add(head);
+    [[-0.1, -0.3], [0.1, -0.3], [-0.1, 0.3], [0.1, 0.3]].forEach(function (l) { var leg = box(0.07, 0.32, 0.07, '#8a5a30'); leg.position.set(l[0], 0.16, l[1]); g.add(leg); });
+    return g;
+  }
+  function makeTruck() {
+    var g = new THREE.Group();
+    var cargo = box(2.4, 2.6, 6, '#c0392b'); cargo.position.set(0, 1.9, 0.8); g.add(cargo);
+    var cab = box(2.3, 2.0, 1.8, '#f1c40f'); cab.position.set(0, 1.5, -3.1); g.add(cab);
+    return g;
+  }
+
+  // ---------------------------------------------------------------- static city
+  function buildCity() {
+    var root = new THREE.Group();
+    var R = rng(42);
+    // ground
+    var ground = new THREE.Mesh(new THREE.PlaneGeometry(2400, 2400), mat('#a9ab8e'));
+    ground.rotation.x = -Math.PI / 2; ground.position.set(215, -0.02, -245); root.add(ground);
+
+    var ROAD_L = -3.2, ROAD_R = 13, roadW = ROAD_R - ROAD_L, roadC = (ROAD_L + ROAD_R) / 2;
+    var asphalt = mat('#4a4d52'), white = mat('#f2f2f2'), median = mat('#d9c36a'), walk = mat('#bdb6a6');
+    var bodies = [], cabs = [], buildings = [], trees = [];
+
+    PATH.segs.forEach(function (g) {
+      if (g.type === 'arc') {
+        var mid = HC.poseAt(PATH, g.s0 + g.len / 2, roadC);
+        var j = new THREE.Mesh(new THREE.BoxGeometry(36, 0.05, 36), asphalt);
+        j.position.set(mid.x, 0.0, mid.z); j.rotation.y = -mid.h; root.add(j);
+        return;
+      }
+      var a = g.s0, b = g.s0 + g.len, midS = (a + b) / 2;
+      var p = HC.poseAt(PATH, midS, roadC);
+      var road = new THREE.Mesh(new THREE.BoxGeometry(roadW, 0.04, g.len + 24), asphalt);
+      road.position.set(p.x, -0.002, p.z); road.rotation.y = -p.h; root.add(road);
+      [[-4.45, 2.5], [14.25, 2.5]].forEach(function (sw) {
+        var q = HC.poseAt(PATH, midS, sw[0]);
+        var w = new THREE.Mesh(new THREE.BoxGeometry(sw[1], 0.18, g.len - 30), walk);
+        w.position.set(q.x, 0.08, q.z); w.rotation.y = -q.h; root.add(w);
+      });
+      // lane dashes (our side + opposite side) and median with a U-turn gap
+      for (var s = a + 8; s < b - 8; s += 9) {
+        [1.75, 9.5].forEach(function (lat) {
+          var d = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.01, 3), white);
+          placeOnRoute(d, s, lat, 0, 0.025); root.add(d);
+        });
+      }
+      for (var ms = a + 10; ms < b - 10; ms += 4) {
+        if (Math.abs(ms - SC.medianGapS) < 6) continue;
+        var m = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.25, 4), median);
+        placeOnRoute(m, ms + 2, 5.6, 0, 0.12); root.add(m);
+      }
+      // buildings, trees and parked cars along this straight
+      for (var bs = a + 22; bs < b - 22; bs += 13 + R() * 4) {
+        [-9, 18].forEach(function (edge) {   // inner edge of the building row (m from the rider's line)
+          var h = 6 + R() * 20, w = 9 + R() * 3, d = 7 + R() * 6;
+          buildings.push({ s: bs, lat: edge + (edge < 0 ? -d / 2 : d / 2), w: w, h: h, d: d });
+        });
+        if (R() < 0.7) trees.push({ s: bs + 5, lat: -5.2 });
+      }
+      for (var ps = a + 26; ps < b - 26; ps += 7.5) {
+        if (ps > 525 && ps < 655) continue;                         // keep the truck zone clear
+        if (Math.abs(ps - 323) < 12 || Math.abs(ps - 490) < 10) continue; // hazard cars placed separately
+        if (R() < 0.45) bodies.push({ s: ps, lat: -2.1, c: R() });
+      }
+    });
+    // explicit parked cars around the pedestrian (gap at s=323)
+    bodies.push({ s: 318, lat: -2.1, c: 0.2 }, { s: 328, lat: -2.1, c: 0.7 });
+
+    // instanced buildings
+    var palette = ['#d9c7a7', '#c9b18f', '#e6d8c3', '#b9a38a', '#d4a373', '#a3b1c2', '#c2b8a3', '#e9c46a', '#bfc0c0', '#8d99ae'];
+    var bMesh = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshLambertMaterial({ color: '#ffffff' }), buildings.length);
+    var M = new THREE.Matrix4(), qt = new THREE.Quaternion(), pos = new THREE.Vector3(), sc = new THREE.Vector3(), col = new THREE.Color();
+    buildings.forEach(function (b, i) {
+      var p = HC.poseAt(PATH, b.s, b.lat);
+      qt.setFromEuler(new THREE.Euler(0, -p.h, 0));
+      M.compose(pos.set(p.x, b.h / 2, p.z), qt, sc.set(b.w, b.h, b.d));
+      bMesh.setMatrixAt(i, M);
+      bMesh.setColorAt(i, col.set(palette[Math.floor(R() * palette.length)]));
+    });
+    root.add(bMesh);
+    // instanced parked cars (body + cabin)
+    var carCols = ['#c0392b', '#ecf0f1', '#2c3e50', '#7f8c8d', '#2980b9', '#f5f5f5', '#8e44ad'];
+    var cb = new THREE.InstancedMesh(new THREE.BoxGeometry(1.8, 0.75, 4.2), new THREE.MeshLambertMaterial({ color: '#ffffff' }), bodies.length);
+    var cc = new THREE.InstancedMesh(new THREE.BoxGeometry(1.6, 0.6, 2.2), new THREE.MeshLambertMaterial({ color: '#ffffff' }), bodies.length);
+    bodies.forEach(function (c, i) {
+      var p = HC.poseAt(PATH, c.s, c.lat);
+      qt.setFromEuler(new THREE.Euler(0, -p.h, 0));
+      var color = carCols[Math.floor(c.c * carCols.length)];
+      M.compose(pos.set(p.x, 0.6, p.z), qt, sc.set(1, 1, 1)); cb.setMatrixAt(i, M); cb.setColorAt(i, col.set(color));
+      var off = new THREE.Vector3(0, 0, 0.25).applyQuaternion(qt);
+      M.compose(pos.set(p.x + off.x, 1.28, p.z + off.z), qt, sc.set(1, 1, 1)); cc.setMatrixAt(i, M); cc.setColorAt(i, col.set(color));
+    });
+    root.add(cb); root.add(cc);
+    // instanced trees
+    var trunk = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.15, 0.2, 2.4, 6), mat('#6b4f32'), trees.length);
+    var crown = new THREE.InstancedMesh(new THREE.SphereGeometry(1.6, 8, 6), mat('#4f7d3a'), trees.length);
+    trees.forEach(function (tr, i) {
+      var p = HC.poseAt(PATH, tr.s, tr.lat);
+      M.compose(pos.set(p.x, 1.2, p.z), qt.identity(), sc.set(1, 1, 1)); trunk.setMatrixAt(i, M);
+      M.compose(pos.set(p.x, 3.2, p.z), qt, sc.set(1, 1, 1)); crown.setMatrixAt(i, M);
+    });
+    root.add(trunk); root.add(crown);
+
+    // parked truck that forces the lane change
+    var truck = makeTruck(); placeOnRoute(truck, SC.truck.s, SC.truck.lat || 0, 0); root.add(truck);
+    return root;
+  }
+
+  function buildScooter() {
+    var g = new THREE.Group();
+    var bar = box(0.72, 0.04, 0.04, '#222'); bar.position.set(0, 0.98, -0.55); g.add(bar);
+    [-0.36, 0.36].forEach(function (x) {
+      var grip = box(0.1, 0.05, 0.05, '#111'); grip.position.set(x, 0.98, -0.55); g.add(grip);
+      var stalk = box(0.02, 0.22, 0.02, '#333'); stalk.position.set(x * 0.85, 1.1, -0.6); g.add(stalk);
+      var mirror = cyl(0.07, 0.02, '#9aa7b0'); mirror.rotation.x = Math.PI / 2; mirror.position.set(x * 0.9, 1.22, -0.6); g.add(mirror);
+    });
+    var cowl = box(0.5, 0.25, 0.25, '#1f6f8b'); cowl.position.set(0, 0.88, -0.62); g.add(cowl);
+    var dial = cyl(0.08, 0.02, '#e8f1f2'); dial.rotation.x = Math.PI / 2 - 0.5; dial.position.set(0, 1.0, -0.6); g.add(dial);
+    var deck = box(0.45, 0.06, 1.0, '#1f6f8b'); deck.position.set(0, 0.35, 0.05); g.add(deck);
+    return g;
+  }
+
+  // ---------------------------------------------------------------- audio
+  var listener = null;
+  function audioInit() {
+    try {
+      if (!listener) { listener = new THREE.AudioListener(); camEl.object3D.add(listener); }
+      if (listener.context.state !== 'running') listener.context.resume();
+    } catch (e) { console.warn('audio unavailable', e); }
+  }
+  function beep(freq, dur, vol) {
+    if (!listener) return;
+    try {
+      var ctx = listener.context, o = ctx.createOscillator(), gn = ctx.createGain(), now = ctx.currentTime;
+      o.frequency.value = freq; o.type = 'sine';
+      gn.gain.setValueAtTime(vol || 0.15, now); gn.gain.exponentialRampToValueAtTime(0.0001, now + dur);
+      o.connect(gn); gn.connect(ctx.destination); o.start(now); o.stop(now + dur + 0.02);
+    } catch (e) {}
+  }
+  /** A two-tone horn that comes FROM the given 3D object (spatial audio through headphones). */
+  function horn(obj, dur, low) {
+    if (!listener) return;
+    try {
+      var ctx = listener.context, now = ctx.currentTime;
+      var pa = new THREE.PositionalAudio(listener);
+      pa.setRefDistance(3); pa.setRolloffFactor(1.1);
+      var gn = ctx.createGain(), o1 = ctx.createOscillator(), o2 = ctx.createOscillator();
+      o1.type = o2.type = 'square';
+      o1.frequency.value = low ? 330 : 440; o2.frequency.value = low ? 415 : 554;
+      gn.gain.setValueAtTime(0.0001, now);
+      gn.gain.exponentialRampToValueAtTime(0.4, now + 0.03);
+      gn.gain.setValueAtTime(0.4, now + dur - 0.05);
+      gn.gain.exponentialRampToValueAtTime(0.0001, now + dur);
+      o1.connect(gn); o2.connect(gn);
+      pa.setNodeSource(gn);
+      obj.add(pa);
+      o1.start(now); o2.start(now); o1.stop(now + dur + 0.05); o2.stop(now + dur + 0.05);
+      setTimeout(function () { try { pa.disconnect(); } catch (e) {} obj.remove(pa); }, (dur + 0.4) * 1000);
+    } catch (e) { console.warn('horn failed', e); }
+  }
+  function say(text) {
+    if (!VOICE || !('speechSynthesis' in window)) return;
+    try {
+      window.speechSynthesis.cancel();
+      var u = new SpeechSynthesisUtterance(text); u.lang = 'en-IN'; u.rate = 1.0;
+      window.speechSynthesis.speak(u);
+    } catch (e) {}
+  }
+
+  // ---------------------------------------------------------------- HUD + flash
+  var hudTimer = null;
+  function hud(text, ms) {
+    hudEl.setAttribute('text', 'value', text || '');
+    hudBgEl.setAttribute('visible', !!text);
+    clearTimeout(hudTimer);
+    if (text && ms) hudTimer = setTimeout(function () { hud(''); }, ms);
+  }
+  var flashMesh = null, flashUntil = 0;
+  function flash(color) {
+    if (!flashMesh) {
+      flashMesh = new THREE.Mesh(new THREE.SphereGeometry(0.4, 16, 12),
+        new THREE.MeshBasicMaterial({ color: color, transparent: true, opacity: 0.45, side: THREE.BackSide, depthTest: false, fog: false }));
+      flashMesh.renderOrder = 999; camEl.object3D.add(flashMesh);
+    }
+    flashMesh.material.color.set(color); flashMesh.visible = true; flashUntil = S.t + 0.5;
+  }
+
+  // ---------------------------------------------------------------- head yaw
+  var qSeat = new THREE.Quaternion(), qCam = new THREE.Quaternion(), eul = new THREE.Euler(0, 0, 0, 'YXZ'),
+      mTmp = new THREE.Matrix4(), vTmp = new THREE.Vector3(), sTmp = new THREE.Vector3();
+  /** Raw yaw of the head inside the seat, three.js convention (left = +), radians. */
+  function camLocalYaw() {
+    var o = camEl.object3D;
+    if (S.inVR) { mTmp.copy(o.matrix); mTmp.decompose(vTmp, qCam, sTmp); } else { qCam.copy(o.quaternion); }
+    eul.setFromQuaternion(qCam, 'YXZ');
+    return eul.y;
+  }
+  /** Head yaw relative to the scooter, degrees, right = + */
+  function headYawDeg() {
+    var o = camEl.object3D;
+    if (S.inVR) { mTmp.copy(o.matrix); mTmp.decompose(vTmp, qCam, sTmp); } else { qCam.copy(o.quaternion); }
+    qSeat.copy(seatEl.object3D.quaternion).multiply(qCam);
+    eul.setFromQuaternion(qSeat, 'YXZ');
+    return HC.wrapDeg(-eul.y * RAD);
+  }
+  function recenter() {
+    seatEl.object3D.rotation.set(0, -camLocalYaw(), 0);
+  }
+
+  // ---------------------------------------------------------------- actors (moving hazards)
+  function addActor(obj, update) {
+    sceneEl.object3D.add(obj);
+    var a = { obj: obj, update: update, dead: false, t0: S.t };
+    S.actors.push(a);
+    update(a, 0); // place it immediately so it never flashes at the world origin
+    return a;
+  }
+  function killActor(a) { a.dead = true; sceneEl.object3D.remove(a.obj); }
+
+  function spawnBlindSpot(m) {
+    var spec = m.blindSpot, obj = spec.kind === 'car' ? makeCar('#f5f5f5') : spec.kind === 'cycle' ? makeCycle() : makeBike('#2d6cdf', '#ffd23f');
+    var sA = S.s - 22, phase = 'approach', tPass = 0, turnS = m.actionS;
+    var throughJunction = /junction/i.test(m.label);
+    var actor = addActor(obj, function (a, dt) {
+      if (phase === 'approach') { sA += (SPEED + 5) * dt; if (sA >= S.s - 1.2) { sA = S.s - 1.2; phase = 'shadow'; } }
+      else if (phase === 'shadow') { sA = S.s - 1.2; }   // sits just behind the rider's shoulder
+      else { sA += (SPEED + 7) * dt; if (S.t - tPass > 4) killActor(a); }
+      if (throughJunction) placeStraightThrough(obj, sA, spec.lateral, turnS); else placeOnRoute(obj, sA, spec.lateral, 0);
+    });
+    actor.onAction = function (missed) {
+      phase = 'pass'; tPass = S.t;
+      if (missed && S.mode === 'train') { horn(obj, 0.9, spec.kind === 'car'); flash('#ff2a2a'); hud('NEAR MISS!\nVehicle in your blind spot', 2200); }
+    };
+    return actor;
+  }
+
+  function spawnHazard(h) {
+    if (h.id === 'H1') { // overtaking bike from behind-right, horn first
+      var bike = makeBike('#111111', '#e74c3c'), sB = S.s - 25;
+      addActor(bike, function (a, dt) { sB += (SPEED + 6) * dt; placeOnRoute(bike, sB, 2.4, 0); if (sB > S.s + 70) killActor(a); });
+      horn(bike, 1.2, false);
+    } else if (h.id === 'H2') { // pedestrian steps out between parked cars
+      var ped = makePerson('#e67e22');
+      addActor(ped, function (a) {
+        var k = Math.max(0, Math.min(1, (S.t - a.t0 - 0.3) / 2.0));
+        placeOnRoute(ped, 323, -3.6 + 3.0 * k, Math.PI / 2);   // walks toward the rider's lane, stops at its edge
+        if (S.s > 345) killActor(a);
+      });
+    } else if (h.id === 'H3') { // car door opens into the lane (right-hand drive: driver door on the traffic side)
+      var car = makeCar('#16a085'), hinge = new THREE.Group(), door = box(0.06, 0.7, 1.1, '#138d75');
+      door.position.set(0, 0.95, 0.55); hinge.add(door); hinge.position.set(0.9, 0, -0.6); car.add(hinge);
+      placeOnRoute(car, 490, -2.1, 0);
+      addActor(car, function (a) {
+        var k = Math.max(0, Math.min(1, (S.t - a.t0 - 1.2) / 0.6));
+        hinge.rotation.y = 1.3 * k;   // swings out to the right, tip ends ~0.15 m from the rider's line
+        if (S.s > 505) killActor(a);
+      });
+    } else if (h.id === 'H4') { // vehicle U-turns through the median gap into our road
+      var LAT0 = 7.8, LAT1 = 3.5, R0 = (LAT0 - LAT1) / 2, cLat = LAT1 + R0, sTurn = SC.medianGapS + 1;
+      var ut = makeCar('#e8e8e8');
+      addActor(ut, function (a) {
+        var dt0 = S.t - a.t0, s, lat, rel;
+        if (dt0 < 1.2) { s = sTurn + 7 - 5.8 * dt0; lat = LAT0; rel = Math.PI; }      // oncoming, slowing down
+        else if (dt0 < 3.6) {                                                         // half-circle through the gap
+          var ph = Math.PI * (dt0 - 1.2) / 2.4;
+          s = sTurn - R0 * Math.sin(ph); lat = cLat + R0 * Math.cos(ph);
+          rel = Math.atan2(-Math.sin(ph), -Math.cos(ph));                             // travel direction = atan2(dLat, dS)
+        } else { s = sTurn + 3 * (dt0 - 3.6); lat = LAT1; rel = 0; }                 // now in our right lane, slow
+        placeOnRoute(ut, s, lat, rel);
+        if (S.s > s + 40) killActor(a);
+      });
+    } else if (h.id === 'H5') { // dog runs across from the right
+      var dog = makeDog();
+      addActor(dog, function (a) {
+        var k = Math.max(0, S.t - a.t0 - 0.8);
+        placeOnRoute(dog, 862, 7 - 5 * k, -Math.PI / 2);
+        if (k > 4) killActor(a);
+      });
+    }
+  }
+
+  function spawnAmbient() { // oncoming traffic on the far carriageway, for realism only
+    var aheadS = S.s + 90, seg = HC.segmentAt(PATH, S.s), segA = HC.segmentAt(PATH, aheadS);
+    if (seg !== segA || seg.type !== 'straight') return;
+    if (S.s > 735 && S.s < 805) return; // keep the U-turn area clear
+    var cols = ['#34495e', '#bdc3c7', '#c0392b', '#2980b9', '#f39c12'];
+    var car = Math.random() < 0.35 ? makeBike('#333', '#3498db') : makeCar(cols[Math.floor(Math.random() * cols.length)]);
+    var sC = aheadS, v = 7 + Math.random() * 3, lat = Math.random() < 0.5 ? 7.8 : 11.2;
+    addActor(car, function (a, dt) {
+      sC -= v * dt;
+      if (sC < seg.s0 + 2 || sC < S.s - 25) { killActor(a); return; }
+      placeOnRoute(car, sC, lat, Math.PI);
+    });
+  }
+
+  // ---------------------------------------------------------------- tap input
+  function onTap(source) {
+    if (S.phase === 'ready') { startRide(); return; }
+    if (S.phase !== 'riding') return;
+    var now = S.t;
+    if (now - S.lastTapAt < 0.2) return;
+    S.lastTapAt = now;
+    S.taps.push(+now.toFixed(3));
+    beep(880, 0.06, 0.08);
+    if (S.mode === 'train') {
+      var hit = S.haz.some(function (h) { return h.kind === 'tap' && h.onsetT != null && now >= h.onsetT && now <= h.onsetT + h.windowS; });
+      hud(hit ? 'Hazard spotted' : 'No hazard there', 900);
+    }
+  }
+  document.addEventListener('keydown', function (e) {
+    if (e.code === 'Space' || e.code === 'Enter') { if (S.phase === 'ready' || S.phase === 'riding') { e.preventDefault(); onTap('key'); } }
+    else if (e.code === 'Escape' && (S.phase === 'riding' || S.phase === 'ready') && !S.inVR) abortRide();
+    else if (S.phase === 'riding' && /^(AudioVolume|MediaPlay|MediaTrack|ArrowUp|ArrowDown)/.test(e.code || e.key)) onTap('remote'); // bluetooth clickers
+  });
+  sceneEl.addEventListener('touchstart', function () { if (!S.inVR) onTap('touch'); }, { passive: true });
+
+  sceneEl.addEventListener('enter-vr', function () {
+    S.inVR = sceneEl.is('vr-mode');
+    var session = sceneEl.renderer && sceneEl.renderer.xr && sceneEl.renderer.xr.getSession && sceneEl.renderer.xr.getSession();
+    if (session) session.addEventListener('select', function () { onTap('xr'); });
+  });
+  sceneEl.addEventListener('exit-vr', function () {
+    var wasVR = S.inVR; S.inVR = false;
+    if (wasVR && (S.phase === 'riding' || S.phase === 'ready')) abortRide();
+  });
+
+  // ---------------------------------------------------------------- ride control
+  function resetRide() {
+    S.actors.forEach(function (a) { if (!a.dead) sceneEl.object3D.remove(a.obj); });
+    S.actors = []; S.samples = { t: [], yaw: [] }; S.taps = []; S.t = 0; S.s = 0; S.nextSample = 0; S.lastTapAt = -1; S.lastAmbientT = 0;
+    S.man = SC.manoeuvres.map(function (m) {
+      return { id: m.id, label: m.label, side: m.side, actionS: m.actionS, prompt: m.prompt, blindSpot: m.blindSpot,
+        promptS: m.actionS - SC.promptLeadS * SPEED, promptT: null, actionT: null, actor: null };
+    });
+    S.haz = SC.hazards.map(function (h) { return Object.assign({ onsetT: null }, h); });
+    placeRig(0);
+  }
+  function placeRig(s) {
+    var p = HC.poseAt(PATH, s, HC.laneOffsetAt(s));
+    rigEl.object3D.position.set(p.x, 0, p.z);
+    rigEl.object3D.rotation.set(0, -p.h, 0);
+  }
+
+  function readMeta() {
+    var id = $('riderId').value.trim();
+    if (!id) { $('formErr').textContent = 'Enter a rider ID first.'; return null; }
+    if (!$('consent').checked) { $('formErr').textContent = 'Tick the consent box first.'; return null; }
+    $('formErr').textContent = '';
+    return { riderId: id, group: $('group').value, yearsRiding: +$('years').value || 0, mode: $('mode').value };
+  }
+
+  function prepare(viewMode) {
+    var meta = readMeta(); if (!meta) return;
+    S.meta = meta; S.mode = meta.mode; S.viewMode = viewMode;
+    audioInit();
+    resetRide();
+    $('setup').classList.add('hidden'); $('results').classList.add('hidden');
+    S.phase = 'ready'; S.readySince = performance.now();
+    hud('Look straight ahead\nTap to start (or wait 8 s)');
+    if (viewMode === 'vr') {
+      sceneEl.enterVR().catch(function (e) {
+        S.phase = 'setup'; $('setup').classList.remove('hidden');
+        $('formErr').textContent = 'Could not start VR: ' + (e && e.message ? e.message : e) + '. Use Chrome on Android, or try without headset.';
+      });
+    } else {
+      $('desktopHint').style.display = 'block';
+    }
+  }
+
+  function startRide() {
+    recenter();
+    S.phase = 'riding'; S.t = 0; S.startedAt = new Date().toISOString();
+    beep(660, 0.15, 0.2);
+    var n = SC.leadInS;
+    hud(String(n));
+    for (var i = 1; i < n; i++) (function (k) { setTimeout(function () { if (S.phase === 'riding') hud(String(n - k)); }, k * 1000); })(i);
+    setTimeout(function () { if (S.phase === 'riding') hud('GO', 800); }, n * 1000);
+  }
+
+  function abortRide() {
+    S.phase = 'setup'; hud('');
+    $('desktopHint').style.display = 'none';
+    $('formErr').textContent = 'The ride was stopped early and was not scored. Start again when ready.';
+    $('setup').classList.remove('hidden');
+    resetRide();
+  }
+
+  function finishRide() {
+    S.phase = 'done'; hud('Ride complete', 1500);
+    var record = {
+      app: 'HeadCheck VR', version: '1.0', simulated: false,
+      riderId: S.meta.riderId, group: S.meta.group, yearsRiding: S.meta.yearsRiding,
+      startedAt: S.startedAt, mode: S.meta.mode, view: S.viewMode,
+      device: navigator.userAgent.slice(0, 160),
+      settings: { speed: SPEED, checkDeg: CHECK_DEG, lookDeg: HC.DEFAULTS.lookDeg, sampleHz: HC.DEFAULTS.sampleHz },
+      rideStartT: SC.leadInS, durationS: +S.t.toFixed(2),
+      series: S.samples, taps: S.taps,
+      events: {
+        manoeuvres: S.man.map(function (m) { return { id: m.id, label: m.label, side: m.side, blindSpot: m.blindSpot, promptT: m.promptT, actionT: m.actionT }; }),
+        hazards: S.haz.map(function (h) { return { id: h.id, label: h.label, kind: h.kind, side: h.side, onsetT: h.onsetT, windowS: h.windowS }; })
+      }
+    };
+    S.result = HC.evaluateRide(record);
+    try {
+      var hist = JSON.parse(localStorage.getItem('headcheck-history') || '[]');
+      hist.push({ riderId: record.riderId, at: record.startedAt, overall: S.result.scores.overall });
+      localStorage.setItem('headcheck-history', JSON.stringify(hist.slice(-50)));
+    } catch (e) {}
+    setTimeout(function () {
+      if (S.inVR) { try { sceneEl.exitVR(); } catch (e) {} }
+      $('desktopHint').style.display = 'none';
+      showResults(S.result);
+    }, 1200);
+  }
+
+  // ---------------------------------------------------------------- per-frame update
+  AFRAME.registerComponent('ride-loop', {
+    tick: function (time, dtMs) {
+      var dt = Math.min(0.05, (dtMs || 16) / 1000);
+      if (flashMesh && flashMesh.visible && S.t > flashUntil) flashMesh.visible = false;
+      if (S.phase === 'ready') {
+        if (performance.now() - S.readySince > 8000) startRide();
+        return;
+      }
+      if (S.phase !== 'riding') return;
+      S.t += dt;
+      S.s = Math.max(0, (S.t - SC.leadInS) * SPEED);
+      placeRig(Math.min(S.s, PATH.length));
+
+      // record head yaw at a fixed rate
+      if (S.t >= S.nextSample) {
+        S.samples.t.push(+S.t.toFixed(3));
+        S.samples.yaw.push(+headYawDeg().toFixed(1));
+        S.nextSample += 1 / HC.DEFAULTS.sampleHz;
+        if (S.nextSample < S.t) S.nextSample = S.t + 1 / HC.DEFAULTS.sampleHz;
+      }
+
+      // manoeuvre prompts and actions
+      S.man.forEach(function (m) {
+        if (m.promptT === null && S.s >= m.promptS) {
+          m.promptT = S.t; beep(520, 0.25, 0.2); say(m.prompt); hud(m.prompt, 3500);
+          if (m.blindSpot) m.actor = spawnBlindSpot(m);
+        }
+        if (m.promptT !== null && m.actionT === null && S.s >= m.actionS) {
+          m.actionT = S.t;
+          var ev = HC.evaluateManoeuvre(S.samples, m, Object.assign({}, HC.DEFAULTS, { checkDeg: CHECK_DEG }));
+          if (m.actor && m.actor.onAction) m.actor.onAction(!ev.checked);
+        }
+      });
+      // hazards
+      S.haz.forEach(function (h) {
+        if (h.onsetT === null && S.s >= h.onsetS) { h.onsetT = S.t; spawnHazard(h); }
+      });
+      // ambient traffic every ~5 s
+      if (S.t - S.lastAmbientT > 5 && S.s > 0) { S.lastAmbientT = S.t; spawnAmbient(); }
+      // move actors
+      for (var i = 0; i < S.actors.length; i++) { var a = S.actors[i]; if (!a.dead) a.update(a, dt); }
+      S.actors = S.actors.filter(function (a) { return !a.dead; });
+
+      if (S.s >= PATH.length) finishRide();
+    }
+  });
+
+  // ---------------------------------------------------------------- results screen
+  function showResults(r) {
+    var sc = r.scores, band = HC.bandFor(sc.overall);
+    $('resTitle').textContent = 'Ride complete – ' + r.riderId;
+    $('resSub').textContent = r.group + ' · ' + (r.mode === 'train' ? 'Training mode' : 'Test mode') + ' · ' + new Date(r.startedAt).toLocaleString();
+    $('resScore').textContent = sc.overall + ' / 100';
+    var icon = band.key === 'safe' ? '✓' : band.key === 'coach' ? '!' : '✕';
+    $('resBand').className = 'band ' + band.key; $('resBand').textContent = icon + ' ' + band.label;
+    $('tCheck').textContent = sc.checksDone + ' / ' + sc.checksExpected;
+    $('tHaz').textContent = sc.hazardsSpotted + ' / ' + sc.hazardsTotal;
+    $('tRt').textContent = sc.meanTapRtMs != null ? (sc.meanTapRtMs / 1000).toFixed(2) + ' s' : '–';
+    $('manBody').innerHTML = r.manoeuvres.map(function (m) {
+      return '<tr><td>' + m.label + (m.nearMiss ? '<br><span class="no">near miss: vehicle in blind spot</span>' : '') +
+        (m.checkedWrongSideOnly ? '<br><span class="no">looked the wrong way</span>' : '') + '</td>' +
+        '<td class="' + (m.checked ? 'yes">✓ Yes' : 'no">✕ No') + '</td>' +
+        '<td class="num">' + (m.checked ? m.leadTimeS.toFixed(1) + ' s before' : '–') + '</td>' +
+        '<td class="num">' + Math.round(m.maxYawTowardSide) + '°</td></tr>';
+    }).join('');
+    $('hazBody').innerHTML = r.hazards.map(function (h) {
+      return '<tr><td>' + h.label + '</td><td class="' + (h.responded ? 'yes">✓ Yes' : 'no">✕ No') + '</td>' +
+        '<td class="num">' + (h.responded ? (h.rtMs / 1000).toFixed(2) + ' s' + (h.kind === 'look' ? ' (looked)' : '') : '–') + '</td></tr>';
+    }).join('');
+    $('resNote').textContent = 'False taps: ' + sc.falseTaps + ' · A shoulder check = head turned at least ' + r.settingsUsed.checkDeg +
+      '° toward the side, between the voice prompt and the manoeuvre.';
+    $('results').classList.remove('hidden');
+  }
+
+  function resultFile() {
+    var r = S.result, d = new Date(r.startedAt);
+    var stamp = d.getFullYear() + String(d.getMonth() + 1).padStart(2, '0') + String(d.getDate()).padStart(2, '0') + '-' +
+      String(d.getHours()).padStart(2, '0') + String(d.getMinutes()).padStart(2, '0');
+    var name = 'headcheck_' + r.riderId.replace(/[^\w-]+/g, '_') + '_' + stamp + '.json';
+    return { name: name, blob: new Blob([JSON.stringify(r)], { type: 'application/json' }) };
+  }
+  $('btnSave').onclick = function () {
+    var f = resultFile(), a = document.createElement('a');
+    a.href = URL.createObjectURL(f.blob); a.download = f.name; document.body.appendChild(a); a.click();
+    setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+  };
+  $('btnShare').onclick = function () {
+    var f = resultFile(), file = new File([f.blob], f.name, { type: 'application/json' });
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      navigator.share({ files: [file], title: 'HeadCheck VR result ' + S.result.riderId }).catch(function () {});
+    } else { $('btnSave').onclick(); }
+  };
+  $('btnAgain').onclick = function () {
+    $('results').classList.add('hidden'); $('setup').classList.remove('hidden');
+    $('riderId').value = ''; $('consent').checked = false; S.phase = 'setup'; resetRide();
+  };
+
+  // ---------------------------------------------------------------- boot
+  $('btnVR').onclick = function () { prepare('vr'); };
+  $('btnFlat').onclick = function () { prepare('flat'); };
+
+  function boot() {
+    sceneEl.setAttribute('ride-loop', '');
+    sceneEl.object3D.add(buildCity());
+    rigEl.object3D.add(buildScooter());
+    resetRide();
+    var st = $('xrStatus');
+    if (!window.isSecureContext) {
+      st.className = 'status bad'; st.textContent = 'This page is not on HTTPS, so VR mode is blocked. Open it from your GitHub Pages / Netlify link.';
+    } else if (navigator.xr && navigator.xr.isSessionSupported) {
+      navigator.xr.isSessionSupported('immersive-vr').then(function (ok) {
+        st.className = ok ? 'status' : 'status bad';
+        st.textContent = ok ? 'VR mode is supported on this device ✓' : 'VR mode not available in this browser. On Android use Chrome. You can still try without a headset.';
+      }).catch(function () { st.className = 'status bad'; st.textContent = 'Could not check VR support.'; });
+    } else {
+      st.className = 'status bad'; st.textContent = 'This browser has no WebXR. On Android use Chrome. You can still try without a headset.';
+    }
+  }
+  if (sceneEl.hasLoaded) boot(); else sceneEl.addEventListener('loaded', boot);
+})();
+</script>
+</body>
