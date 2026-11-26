@@ -3,409 +3,442 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>HeadCheck VR – Fleet Dashboard</title>
+<title>HeadCheck VR 2 – Fleet dashboard</title>
 <script src="headcheck-core.js"></script>
+<script src="i18n.js"></script>
 <style>
-  .viz-root {
-    color-scheme: light;
-    --page: #f9f9f9; --surface-1: #ffffff; --text-primary: #191919; --text-secondary: #666666;
-    --grid: #e7e7e7; --axis: #c2c2c2; --border: rgba(11,11,11,0.10);
-    --series-1: #257de0; --series-2: #f47230; --band-fill: rgba(37,125,224,0.08); --band-fill-l: rgba(244,114,48,0.10);
-    --good: #0a7d1c; --good-bg: #e5f5e8; --warn: #9a5b00; --warn-bg: #fff3df; --bad: #b8282a; --bad-bg: #fde8e8;
-    --accent: #1b64be; --on-accent: #ffffff;
-  }
-  @media (prefers-color-scheme: dark) {
-    :root:where(:not([data-theme="light"])) .viz-root {
-      color-scheme: dark;
-      --page: #0b0b0b; --surface-1: #191919; --text-primary: #efefef; --text-secondary: #9c9c9c;
-      --grid: #303030; --axis: #474747; --border: rgba(255,255,255,0.10);
-      --series-1: #338ced; --series-2: #e76624; --band-fill: rgba(51,140,237,0.12); --band-fill-l: rgba(231,102,36,0.14);
-      --good: #53c556; --good-bg: #173a1c; --warn: #fbb315; --warn-bg: #3a2c0c; --bad: #eb6263; --bad-bg: #3d1717;
-      --accent: #6aabf1; --on-accent: #0b0b0b;
-    }
-  }
-  * { box-sizing: border-box; }
-  body { margin: 0; }
-  .viz-root { background: var(--page); color: var(--text-primary); min-height: 100vh;
-    font-family: system-ui, -apple-system, "Segoe UI", sans-serif; padding: 24px; }
-  .wrap { max-width: 1120px; margin: 0 auto; }
-  h1 { font-size: 22px; margin: 0; } h2 { font-size: 15px; margin: 0 0 2px; }
-  .sub { color: var(--text-secondary); font-size: 13px; margin: 4px 0 0; }
-  .bar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin: 18px 0; }
-  button, .filebtn { font: inherit; font-size: 14px; padding: 8px 14px; border-radius: 8px; border: 1px solid var(--accent);
-    background: var(--surface-1); color: var(--accent); cursor: pointer; }
-  button.primary, .filebtn { background: var(--accent); color: var(--on-accent); }
-  .filebtn input { display: none; }
-  .ctl { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-secondary); }
-  select { font: inherit; font-size: 14px; padding: 6px 8px; border-radius: 8px; border: 1px solid var(--axis); background: var(--surface-1); color: var(--text-primary); }
-  input[type=range] { width: 140px; }
-  .card { background: var(--surface-1); border: 1px solid var(--border); border-radius: 12px; padding: 16px; margin-bottom: 16px; }
-  .drop { border: 2px dashed var(--axis); border-radius: 12px; padding: 28px; text-align: center; color: var(--text-secondary); font-size: 14px; }
-  .drop.over { border-color: var(--accent); color: var(--accent); }
-  .tiles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 16px; }
-  .tile { background: var(--surface-1); border: 1px solid var(--border); border-radius: 12px; padding: 14px; }
-  .tile .k { font-size: 12px; color: var(--text-secondary); }
-  .tile .v { font-size: 28px; font-weight: 600; margin-top: 4px; }
-  .tile .d { font-size: 12px; color: var(--text-secondary); margin-top: 4px; line-height: 1.35; }
-  .swatch { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; vertical-align: 0; }
-  .head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 8px; flex-wrap: wrap; }
-  .legend { display: flex; gap: 14px; font-size: 12px; color: var(--text-secondary); align-items: center; flex-wrap: wrap; }
-  svg text { font-family: system-ui, -apple-system, "Segoe UI", sans-serif; }
+  :root { color-scheme: light;
+    --page: #f4f3ef; --surface-1: #ffffff; --surface-2: #f6f6f4; --line: #e4e4e0; --grid: #ececea;
+    --text-primary: #191919; --text-secondary: #666666; --accent: #0b5c6b; --accent-ink: #ffffff;
+    --series-1: #257de0; --series-2: #f47230; --band: rgba(244,114,48,0.16); --ref: #9a9a9a;
+    --good: #0aac23; --warning: #fbb315; --critical: #dc3c3d; --neutral: #8a96a0; }
+  @media (prefers-color-scheme: dark) { :root { color-scheme: dark;
+    --page: #111213; --surface-1: #191919; --surface-2: #222222; --line: #333333; --grid: #2b2b2b;
+    --text-primary: #efefef; --text-secondary: #9c9c9c; --accent: #3aa6b9; --accent-ink: #0b1a1d;
+    --series-1: #338ced; --series-2: #e76624; --band: rgba(231,102,36,0.22); --ref: #7d7d7d; } }
+  * { box-sizing: border-box; min-width: 0; }
+  body { margin: 0; background: var(--page); color: var(--text-primary); font: 14px/1.5 system-ui, -apple-system, "Segoe UI", "Noto Sans", sans-serif; }
+  header { background: #10262b; color: #fff; padding: 16px 20px; display: flex; flex-wrap: wrap; gap: 10px 20px; align-items: center; justify-content: space-between; }
+  header h1 { margin: 0; font-size: 19px; } header p { margin: 2px 0 0; color: #b9cdd1; font-size: 13px; }
+  main { max-width: 1180px; margin: 0 auto; padding: 14px; }
+  .actions { display: flex; flex-wrap: wrap; gap: 8px; }
+  button, .btn { font: inherit; font-size: 14px; min-height: 38px; padding: 7px 13px; border-radius: 9px; border: 1px solid var(--accent); background: var(--surface-1); color: var(--accent); cursor: pointer; }
+  button.primary, .btn.primary { background: var(--accent); color: var(--accent-ink); }
+  button:disabled { opacity: .5; cursor: default; }
+  header button, header .btn { border-color: #6fb3bf; background: transparent; color: #fff; } header .primary { background: #fff; color: #10262b; border-color: #fff; }
+  .card { background: var(--surface-1); border: 1px solid var(--line); border-radius: 12px; padding: 16px; margin-top: 14px; }
+  .card h2 { margin: 0 0 4px; font-size: 16px; } .sub { color: var(--text-secondary); font-size: 13px; margin: 0 0 10px; }
+  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-top: 14px; }
+  .tile { background: var(--surface-1); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; }
+  .tile .k { color: var(--text-secondary); font-size: 12.5px; display: flex; gap: 6px; align-items: center; }
+  .tile .v { font-size: 28px; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1.2; margin-top: 2px; }
+  .tile .s { color: var(--text-secondary); font-size: 12px; }
+  .grid2 { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: 14px; align-items: start; }
+  @media (max-width: 900px) { .grid2 { grid-template-columns: 1fr; } }
   table { width: 100%; border-collapse: collapse; font-size: 13px; }
-  th, td { text-align: left; padding: 8px 6px; border-bottom: 1px solid var(--grid); }
-  th { color: var(--text-secondary); font-weight: 600; font-size: 12px; }
-  td.n { font-variant-numeric: tabular-nums; }
-  tbody tr { cursor: pointer; } tbody tr:hover { background: var(--band-fill); } tbody tr.sel { outline: 2px solid var(--accent); outline-offset: -2px; }
-  .pill { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 12px; font-weight: 600; white-space: nowrap; }
-  .pill.safe { background: var(--good-bg); color: var(--good); } .pill.coach { background: var(--warn-bg); color: var(--warn); } .pill.risk { background: var(--bad-bg); color: var(--bad); }
-  .sim { font-size: 11px; color: var(--text-secondary); border: 1px solid var(--axis); border-radius: 4px; padding: 1px 4px; margin-left: 4px; }
-  #tip { position: fixed; pointer-events: none; background: var(--surface-1); color: var(--text-primary); border: 1px solid var(--border);
-    box-shadow: 0 4px 14px rgba(0,0,0,.12); border-radius: 8px; padding: 8px 10px; font-size: 12px; display: none; z-index: 20; line-height: 1.45; }
-  .empty { color: var(--text-secondary); font-size: 14px; padding: 30px 0; text-align: center; }
-  .note { font-size: 12px; color: var(--text-secondary); margin-top: 8px; line-height: 1.45; }
-  .hidden { display: none !important; }
-  @media (max-width: 800px) { .tiles { grid-template-columns: repeat(2, 1fr); } .viz-root { padding: 14px; } }
+  th, td { text-align: left; padding: 7px 6px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+  th { color: var(--text-secondary); font-weight: 600; font-size: 12px; } td.n, th.n { text-align: right; font-variant-numeric: tabular-nums; }
+  tbody tr.sel { background: var(--surface-2); } tbody tr.click { cursor: pointer; } tbody tr.click:hover { background: var(--surface-2); }
+  .st { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+  .st i { width: 18px; height: 18px; border-radius: 50%; display: inline-grid; place-items: center; font-style: normal; font-size: 11px; font-weight: 800; color: #fff; flex: none; }
+  .st-FIT i { background: var(--good); } .st-CAUTION i { background: var(--warning); color: #3a2600; } .st-NOT_FIT i { background: var(--critical); } .st-INVALID i { background: var(--neutral); }
+  .badge { font-size: 11px; padding: 1px 6px; border-radius: 6px; background: var(--surface-2); color: var(--text-secondary); border: 1px solid var(--line); margin-left: 4px; }
+  .chart { position: relative; width: 100%; } .chart svg { display: block; width: 100%; overflow: visible; }
+  .chart text { fill: var(--text-secondary); font-size: 11px; font-family: inherit; }
+  .chart .ttl { font-size: 13px; font-weight: 650; fill: var(--text-primary); }
+  .legend { display: flex; flex-wrap: wrap; gap: 12px; font-size: 12px; color: var(--text-secondary); margin: 2px 0 4px; }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; } .legend b { display: inline-block; width: 14px; height: 3px; border-radius: 2px; }
+  .legend b.dot { width: 9px; height: 9px; border-radius: 50%; } .legend b.area { height: 10px; border-radius: 2px; }
+  #tip { position: fixed; z-index: 50; pointer-events: none; background: var(--surface-1); color: var(--text-primary); border: 1px solid var(--line); border-radius: 8px; padding: 7px 9px; font-size: 12px; box-shadow: 0 4px 14px rgba(0,0,0,.16); display: none; max-width: 260px; }
+  #tip b { font-weight: 650; }
+  .row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+  select { font: inherit; font-size: 13px; padding: 6px 8px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface-1); color: var(--text-primary); max-width: 100%; }
+  .empty { color: var(--text-secondary); padding: 18px 4px; text-align: center; }
+  .reasons { margin: 6px 0 0; padding-left: 18px; } .reasons li { margin: 2px 0; }
+  .note { color: var(--text-secondary); font-size: 12px; margin-top: 8px; }
+  .bar { height: 8px; border-radius: 4px; background: var(--grid); overflow: hidden; margin-top: 10px; } .bar i { display: block; height: 100%; width: 0; background: var(--accent); transition: width .2s; }
+  .sliders { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 8px 18px; margin: 6px 0 4px; }
+  .sliders label { font-size: 13px; display: grid; gap: 2px; } .sliders input { width: 100%; }
+  .kpi { display: flex; flex-wrap: wrap; gap: 10px 22px; font-size: 13px; margin-top: 8px; } .kpi b { font-size: 18px; font-variant-numeric: tabular-nums; }
+  .cm td.n { font-size: 14px; } .cm td.hi { font-weight: 700; }
+  .tbl-wrap { overflow-x: auto; } .nw { white-space: nowrap; } .tm { color: var(--text-secondary); font-size: 12px; white-space: nowrap; }
 </style>
 </head>
 <body>
-<div class="viz-root">
-<div class="wrap">
-  <h1>HeadCheck VR – Fleet dashboard</h1>
-  <p class="sub">Load the result files from riders' phones. Compare experienced and new riders and inspect each rider's head movement.</p>
-
-  <div class="bar">
-    <label class="filebtn">Load result files (.json)<input id="files" type="file" accept=".json,application/json" multiple></label>
-    <button id="demo">Load demo data (simulated riders)</button>
-    <button id="csv">Export table (CSV)</button>
-    <button id="clear">Clear</button>
-    <span class="ctl">Shoulder-check threshold
-      <input id="thr" type="range" min="30" max="90" step="5" value="60"> <b id="thrVal">60°</b></span>
+<header>
+  <div><h1>HeadCheck VR · Fleet dashboard</h1><p>Fit-to-ride checks for delivery and bike-taxi riders</p></div>
+  <div class="actions">
+    <label class="btn primary" for="files">Import result files</label>
+    <input id="files" type="file" accept=".json,application/json" multiple hidden>
+    <button id="btnDemo">Load demo fleet</button>
+    <button id="btnCsv">Export CSV</button>
+    <button id="btnClear">Clear</button>
   </div>
-
-  <div id="drop" class="drop">Drag and drop rider result files here</div>
-
-  <div id="main" class="hidden">
-    <div class="tiles">
-      <div class="tile"><div class="k">Riders loaded</div><div class="v" id="kN">–</div><div class="d" id="kNd"></div></div>
-      <div class="tile"><div class="k"><span class="swatch" style="background:var(--series-1)"></span>Experienced – mean score</div><div class="v" id="kA">–</div><div class="d" id="kAd"></div></div>
-      <div class="tile"><div class="k"><span class="swatch" style="background:var(--series-2)"></span>New / non-rider – mean score</div><div class="v" id="kB">–</div><div class="d" id="kBd"></div></div>
-      <div class="tile"><div class="k">Does the test separate the groups?</div><div class="v" id="kP">–</div><div class="d" id="kPd"></div></div>
-    </div>
-
-    <div class="card">
-      <div class="head">
-        <div><h2>Group comparison</h2><div class="sub">Each dot is one rider · the bar marks the group mean</div></div>
-        <div class="ctl">Metric
-          <select id="metric">
-            <option value="overall">Overall score (0–100)</option>
-            <option value="headCheckPct">Shoulder checks done (%)</option>
-            <option value="hazardPct">Hazards spotted (%)</option>
-            <option value="meanTapRtMs">Mean tap reaction (s)</option>
-            <option value="meanCheckLeadS">How early they check (s before manoeuvre)</option>
-          </select>
-        </div>
-      </div>
-      <svg id="dots" width="100%" height="200" role="img" aria-label="Dot plot comparing groups"></svg>
-    </div>
-
-    <div class="card">
-      <div class="head">
-        <div><h2 id="tlTitle">Head movement – select a rider</h2><div class="sub" id="tlSub">Click a row in the table below</div></div>
-        <div class="legend">
-          <span><span class="swatch" style="background:var(--band-fill);border:1px solid var(--series-1);border-radius:2px"></span>Window to check right</span>
-          <span><span class="swatch" style="background:var(--band-fill-l);border:1px solid var(--series-2);border-radius:2px"></span>Window to check left</span>
-          <span>▲ hazard appears · ● tap</span>
-        </div>
-      </div>
-      <svg id="tl" width="100%" height="300" role="img" aria-label="Head yaw over time for the selected rider"></svg>
-      <p class="note">Up = looking right, down = looking left. The dashed lines are the shoulder-check threshold. A check counts only if the line crosses the threshold on the correct side inside the shaded window (between the voice prompt and the manoeuvre).</p>
-    </div>
-
+</header>
+<main>
+  <div class="tiles" id="tiles"></div>
+  <div class="grid2">
     <div class="card">
       <h2>Riders</h2>
-      <table>
-        <thead><tr><th>Rider</th><th>Group</th><th>Score</th><th>Band</th><th>Checks</th><th>Near misses</th><th>Hazards</th><th>Mean tap RT</th><th>Horn → look</th><th>False taps</th></tr></thead>
-        <tbody id="rows"></tbody>
-      </table>
-      <p class="note" id="method"></p>
+      <p class="sub">Latest check per rider. Select a rider to see their history.</p>
+      <div class="tbl-wrap"><table><thead><tr><th>Rider</th><th>Last check</th><th>Verdict</th><th class="n">Index</th><th class="n">Baseline</th></tr></thead><tbody id="riders"></tbody></table></div>
+      <div class="empty" id="ridersEmpty">No checks yet. Import result files from the simulator, or load the demo fleet.</div>
+    </div>
+    <div class="card" id="detail">
+      <div class="empty">Select a rider.</div>
     </div>
   </div>
-</div>
-</div>
+  <div class="card">
+    <h2>Validation with synthetic riders</h2>
+    <p class="sub">Runs the real scoring engine on simulated riders: each builds a personal baseline from 3 rested rides, then rides once rested, drowsy, tired and impaired. This checks that the pipeline separates conditions. It does not show real-world accuracy, which needs a pilot study with real riders.</p>
+    <div class="row"><button class="primary" id="btnCohort">Run 12 synthetic riders (84 rides)</button><span class="sub" id="cohortStatus" style="margin:0"></span></div>
+    <div class="bar"><i id="cohortBar"></i></div>
+    <div id="cohort"></div>
+  </div>
+  <p class="note">Data stays in this browser (summaries in local storage; ride traces only for files imported in this visit). Thresholds are provisional until calibrated with pilot riders. Rider-facing text in Hindi and Tamil needs review by native speakers before a pilot.</p>
+</main>
 <div id="tip"></div>
 
 <script>
 (function () {
   'use strict';
-  var HC = window.HC, $ = function (id) { return document.getElementById(id); };
-  var NS = 'http://www.w3.org/2000/svg';
-  var GROUPS = ['Experienced rider', 'New / non-rider'];
-  var GCOL = ['var(--series-1)', 'var(--series-2)'];
-  var raw = [];        // records as loaded (with series)
-  var rows = [];       // re-scored at the current threshold
-  var selected = null;
+  var HC = window.HC2, L10N = window.HCI18N;
+  var $ = function (id) { return document.getElementById(id); };
+  var NS = 'http://www.w3.org/2000/svg', KEY = 'hc2-dash';
+  var VLABEL = { FIT: 'Fit', CAUTION: 'Take a break', NOT_FIT: 'Not fit', INVALID: 'Not valid' }, VICON = { FIT: '✓', CAUTION: '!', NOT_FIT: '✕', INVALID: '?' };
+  var COND = ['rested', 'drowsy', 'tired', 'impaired'];
+  var store = load(), full = {}, sel = { rider: null, session: null };
 
-  // ------------------------------------------------------------ loading
-  function addRecords(list) {
-    list.forEach(function (r) {
-      if (!r || r.app !== 'HeadCheck VR' || !r.series || !r.events) return;
-      raw = raw.filter(function (x) { return !(x.riderId === r.riderId && x.startedAt === r.startedAt); });
-      raw.push(r);
+  function load() { try { return JSON.parse(localStorage.getItem(KEY)) || { sessions: [] }; } catch (e) { return { sessions: [] }; } }
+  function save() { try { localStorage.setItem(KEY, JSON.stringify(store)); } catch (e) { console.warn('storage full', e); } }
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+  function status(v) { return '<span class="st st-' + v + '"><i>' + VICON[v] + '</i>' + VLABEL[v] + '</span>'; }
+  function fmtDate(iso, withTime) { var d = new Date(iso); return d.toLocaleDateString(undefined, { day: 'numeric', month: 'short' }) + (withTime ? ' ' + d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' }) : ''); }
+  function r1(x) { return x == null ? null : Math.round(x * 10) / 10; }
+
+  // ---------------------------------------------------------------- data
+  function summarize(data, assessment) {
+    var A = assessment, m = A.metrics || {};
+    return {
+      id: data.riderId + '|' + data.startedAt, riderId: data.riderId, at: data.startedAt, vehicle: data.vehicle, lang: data.lang, mode: data.mode,
+      simulated: !!data.simulated, condition: data.condition || null, verdict: A.verdict, index: A.index, scores: A.scores, reasons: A.reasons,
+      invalid: A.invalid || (A.verdict === 'INVALID' ? ['?'] : []), comp: A.baseline ? A.baseline.composite : null, baseN: A.baseline ? A.baseline.n : 0, baseReady: !!(A.baseline && A.baseline.ready),
+      durationS: data.durationS, summary: A.summary || null,
+      m: { sdlp: m.sdlp, drtRT: m.drtRT, drtMissRate: m.drtMissRate, brakeRT: m.brakeRT, controlLagMs: m.controlLagMs, collisions: m.collisions, eyesOffMax: m.eyesOffMax,
+           departures: m.departures, kerbHits: m.kerbHits, answersCorrect: m.answersCorrect, answersN: m.answersN, shoulderCheck: m.shoulderCheck, schoolOverPct: m.schoolOverPct,
+           drtHits: m.drtHits, drtN: m.drtN, drtAnticip: m.drtAnticip, nearMisses: m.nearMisses }
+    };
+  }
+  function riderHistory(riderId, before) {
+    return store.sessions.filter(function (s) { return s.riderId === riderId && s.at < before && s.summary; })
+      .sort(function (a, b) { return a.at < b.at ? -1 : 1; }).map(function (s) { return s.summary; });
+  }
+  function addSession(data) {
+    if (!data || data.app !== 'HeadCheck VR' && data.schema !== 2 || !data.log || !data.riderId) throw new Error('not a HeadCheck VR 2 result file');
+    var A = data.assessment && data.assessment.metrics ? data.assessment : HC.assess(data, riderHistory(data.riderId, data.startedAt));
+    var s = summarize(data, A);
+    store.sessions = store.sessions.filter(function (x) { return x.id !== s.id; }).concat([s]);
+    full[s.id] = data;
+    return s;
+  }
+  $('files').addEventListener('change', function () {
+    var files = Array.prototype.slice.call(this.files), ok = 0, bad = [];
+    Promise.all(files.map(function (f) {
+      return f.text().then(function (t) { try { addSession(JSON.parse(t)); ok++; } catch (e) { bad.push(f.name); } });
+    })).then(function () {
+      save(); render();
+      if (bad.length) alert('Imported ' + ok + ' file(s). Skipped ' + bad.length + ' that are not HeadCheck VR 2 results: ' + bad.join(', '));
+      $('files').value = '';
     });
-    rescore();
-  }
-  function readFiles(files) {
-    var pending = files.length, out = [], bad = 0;
-    Array.prototype.forEach.call(files, function (f) {
-      var fr = new FileReader();
-      fr.onload = function () { try { out.push(JSON.parse(fr.result)); } catch (e) { bad++; } if (--pending === 0) done(); };
-      fr.readAsText(f);
-    });
-    function done() { addRecords(out); if (bad) alert(bad + ' file(s) could not be read as HeadCheck results.'); }
-  }
-  $('files').onchange = function (e) { readFiles(e.target.files); e.target.value = ''; };
-  var drop = $('drop');
-  ['dragenter', 'dragover'].forEach(function (t) { document.addEventListener(t, function (e) { e.preventDefault(); drop.classList.add('over'); }); });
-  ['dragleave', 'drop'].forEach(function (t) { document.addEventListener(t, function (e) { e.preventDefault(); drop.classList.remove('over'); }); });
-  document.addEventListener('drop', function (e) { if (e.dataTransfer.files.length) readFiles(e.dataTransfer.files); });
-  $('demo').onclick = function () {
-    var list = [];
-    for (var i = 1; i <= 6; i++) list.push(HC.simulateRider('experienced', i, 'SIM-E' + i));
-    for (var j = 1; j <= 6; j++) list.push(HC.simulateRider('new', 100 + j, 'SIM-N' + j));
-    addRecords(list);
-  };
-  $('clear').onclick = function () { raw = []; rows = []; selected = null; render(); };
-  $('thr').oninput = function () { $('thrVal').textContent = this.value + '°'; rescore(); };
-  $('metric').onchange = render;
+  });
+  $('btnClear').onclick = function () { if (!confirm('Remove all checks from this browser?')) return; store = { sessions: [] }; full = {}; sel = { rider: null, session: null }; save(); render(); };
 
-  function rescore() {
-    var thr = +$('thr').value;
-    rows = raw.map(function (r) { return HC.evaluateRide(r, { checkDeg: thr }); });
-    rows.sort(function (a, b) { return b.scores.overall - a.scores.overall; });
-    if (selected && !rows.some(function (r) { return key(r) === selected; })) selected = null;
-    if (!selected && rows.length) selected = key(rows[0]);
-    render();
-  }
-  function key(r) { return r.riderId + '|' + r.startedAt; }
-  function groupIdx(r) { return /experienced/i.test(r.group) ? 0 : 1; }
-
-  // ------------------------------------------------------------ helpers
-  function el(tag, attrs, parent, text) {
-    var n = document.createElementNS(NS, tag);
-    for (var k in attrs) n.setAttribute(k, attrs[k]);
-    if (text != null) n.textContent = text;
-    if (parent) parent.appendChild(n);
-    return n;
-  }
-  function clear(svg) { while (svg.firstChild) svg.removeChild(svg.firstChild); }
-  var tip = $('tip');
-  function showTip(html, ev) { tip.innerHTML = html; tip.style.display = 'block'; moveTip(ev); }
-  function moveTip(ev) {
-    var x = ev.clientX + 14, y = ev.clientY + 14, w = tip.offsetWidth, h = tip.offsetHeight;
-    if (x + w > innerWidth - 8) x = ev.clientX - w - 14;
-    if (y + h > innerHeight - 8) y = ev.clientY - h - 14;
-    tip.style.left = x + 'px'; tip.style.top = y + 'px';
-  }
-  function hideTip() { tip.style.display = 'none'; }
-  function niceTicks(min, max, n) {
-    var span = max - min || 1, step = Math.pow(10, Math.floor(Math.log10(span / n))), err = span / n / step;
-    step *= err >= 7.5 ? 10 : err >= 3 ? 5 : err >= 1.5 ? 2 : 1;
-    var out = []; for (var v = Math.ceil(min / step) * step; v <= max + 1e-9; v += step) out.push(+v.toFixed(6));
-    return out;
-  }
-  function metricValue(r, m) {
-    var v = r.scores[m];
-    if (v == null) return null;
-    return m === 'meanTapRtMs' ? v / 1000 : v;
-  }
-  function fmt(v, m) {
-    if (v == null) return '–';
-    if (m === 'meanTapRtMs' || m === 'meanCheckLeadS') return v.toFixed(2) + ' s';
-    if (m === 'overall') return String(Math.round(v));
-    return Math.round(v) + '%';
-  }
-
-  // ------------------------------------------------------------ render
-  function render() {
-    var has = rows.length > 0;
-    $('main').classList.toggle('hidden', !has);
-    drop.classList.toggle('hidden', has);
-    if (!has) return;
-    renderTiles(); renderDots(); renderTable(); renderTimeline();
-  }
-
-  function renderTiles() {
-    var A = rows.filter(function (r) { return groupIdx(r) === 0; }).map(function (r) { return r.scores.overall; });
-    var B = rows.filter(function (r) { return groupIdx(r) === 1; }).map(function (r) { return r.scores.overall; });
-    var sims = rows.filter(function (r) { return r.simulated; }).length;
-    $('kN').textContent = rows.length;
-    $('kNd').textContent = A.length + ' experienced · ' + B.length + ' new' + (sims ? ' · ' + sims + ' simulated' : '');
-    $('kA').textContent = A.length ? Math.round(HC.mean(A)) : '–';
-    $('kAd').textContent = A.length > 1 ? 'SD ' + HC.sd(A).toFixed(1) + ' · n = ' + A.length : 'n = ' + A.length;
-    $('kB').textContent = B.length ? Math.round(HC.mean(B)) : '–';
-    $('kBd').textContent = B.length > 1 ? 'SD ' + HC.sd(B).toFixed(1) + ' · n = ' + B.length : 'n = ' + B.length;
-    var w = HC.welchTest(A, B);
-    if (!w) { $('kP').textContent = '–'; $('kPd').textContent = 'Needs at least 2 riders in each group.'; return; }
-    var p = w.p < 0.001 ? 'p < 0.001' : 'p = ' + w.p.toFixed(3);
-    $('kP').textContent = w.p < 0.05 ? 'Yes' : 'Not yet';
-    $('kPd').textContent = 'Welch t = ' + w.t.toFixed(2) + ', df = ' + w.df.toFixed(1) + ', ' + p +
-      ' · Cohen\'s d = ' + (w.cohenD == null ? '–' : w.cohenD.toFixed(2)) + (A.length + B.length < 12 ? ' · small sample, treat as a pilot' : '');
-  }
-
-  function renderDots() {
-    var svg = $('dots'); clear(svg);
-    var m = $('metric').value, W = svg.clientWidth || 900, H = 200, L = 140, R = 30, T = 16, Bm = 36;
-    svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
-    var vals = rows.map(function (r) { return metricValue(r, m); }).filter(function (v) { return v != null; });
-    var lo, hi;
-    if (m === 'overall' || m === 'headCheckPct' || m === 'hazardPct') { lo = 0; hi = 100; }
-    else { lo = 0; hi = Math.max(1, Math.ceil(Math.max.apply(null, vals.concat([1])) * 1.15 * 2) / 2); }
-    var x = function (v) { return L + (v - lo) / (hi - lo) * (W - L - R); };
-    niceTicks(lo, hi, 6).forEach(function (t) {
-      el('line', { x1: x(t), x2: x(t), y1: T, y2: H - Bm, stroke: 'var(--grid)', 'stroke-width': 1 }, svg);
-      el('text', { x: x(t), y: H - Bm + 18, 'text-anchor': 'middle', 'font-size': 11, fill: 'var(--text-secondary)' }, svg, fmt(t, m).replace('.00', ''));
-    });
-    var rowH = (H - T - Bm) / 2;
-    GROUPS.forEach(function (g, gi) {
-      var cy = T + rowH * gi + rowH / 2;
-      el('text', { x: 0, y: cy + 4, 'font-size': 13, fill: 'var(--text-primary)', 'font-weight': 600 }, svg, gi === 0 ? 'Experienced' : 'New / non-rider');
-      var gRows = rows.filter(function (r) { return groupIdx(r) === gi && metricValue(r, m) != null; });
-      var gv = gRows.map(function (r) { return metricValue(r, m); });
-      if (gv.length) {
-        var mu = HC.mean(gv);
-        el('line', { x1: x(mu), x2: x(mu), y1: cy - 22, y2: cy + 22, stroke: 'var(--text-primary)', 'stroke-width': 2, 'stroke-linecap': 'round' }, svg);
-        el('text', { x: x(mu), y: cy - 27, 'text-anchor': 'middle', 'font-size': 11, fill: 'var(--text-secondary)' }, svg, 'mean ' + fmt(mu, m));
+  // demo fleet: synthetic riders over the past week (clearly labelled as simulated)
+  $('btnDemo').onclick = function () {
+    var btn = this; btn.disabled = true; btn.textContent = 'Simulating…';
+    var plan = [], riders = ['DEMO-R01', 'DEMO-R02', 'DEMO-R03', 'DEMO-R04', 'DEMO-R05', 'DEMO-R06'];
+    var special = { 'DEMO-R02': { 5: 'tired' }, 'DEMO-R04': { 4: 'drowsy', 5: 'impaired' }, 'DEMO-R06': { 3: 'tired' } };
+    var now = new Date(); now.setMinutes(0, 0, 0);
+    riders.forEach(function (id, ri) {
+      for (var d = 0; d < 6; d++) {
+        var at = new Date(now.getTime() - (5 - d) * 86400000); at.setHours(7 + (ri % 3), 10 + ri * 7, 0, 0);
+        plan.push({ id: id, at: at.toISOString(), bot: (special[id] && special[id][d]) || 'rested', seed: 1000 + ri * 50 + d, lang: ['ta', 'hi', 'en'][ri % 3] });
       }
-      // stack identical values so every rider stays visible
-      var seen = {};
-      gRows.forEach(function (r) {
-        var v = metricValue(r, m), k2 = Math.round(x(v) / 6), n = seen[k2] = (seen[k2] || 0) + 1;
-        var dy = (n % 2 ? 1 : -1) * Math.floor(n / 2) * 9;
-        var c = el('circle', { cx: x(v), cy: cy + dy, r: 5.5, fill: GCOL[gi], stroke: 'var(--surface-1)', 'stroke-width': 2 }, svg);
-        if (key(r) === selected) c.setAttribute('stroke', 'var(--text-primary)');
-        var hit = el('circle', { cx: x(v), cy: cy + dy, r: 12, fill: 'transparent', style: 'cursor:pointer' }, svg);
-        hit.addEventListener('mousemove', function (ev) { showTip('<b>' + r.riderId + '</b>' + (r.simulated ? ' (simulated)' : '') + '<br>' + r.group + '<br>' + $('metric').selectedOptions[0].text + ': <b>' + fmt(v, m) + '</b>', ev); });
-        hit.addEventListener('mouseleave', hideTip);
-        hit.addEventListener('click', function () { selected = key(r); render(); });
+    });
+    var i = 0;
+    (function step() {
+      if (i >= plan.length) { save(); sel.rider = sel.rider || 'DEMO-R04'; sel.session = null; render(); btn.disabled = false; btn.textContent = 'Load demo fleet'; return; }
+      var p = plan[i++], data = HC.runSession({ seed: p.seed, bot: p.bot, riderId: p.id, lang: p.lang, startedAt: p.at });
+      data.assessment = HC.assess(data, riderHistory(p.id, p.at));
+      addSession(data);
+      btn.textContent = 'Simulating ' + i + '/' + plan.length;
+      setTimeout(step, 0);
+    })();
+  };
+
+  $('btnCsv').onclick = function () {
+    var cols = ['riderId', 'at', 'vehicle', 'lang', 'mode', 'simulated', 'condition', 'verdict', 'index', 'control', 'reaction', 'attention', 'hazards', 'rules', 'cognition',
+      'sdlp_m', 'drt_rt_ms', 'drt_miss_rate', 'brake_rt_s', 'control_lag_ms', 'collisions', 'near_misses', 'eyes_off_max_s', 'departures', 'answers_correct', 'baseline_n', 'change_score', 'reasons'];
+    var rows = store.sessions.slice().sort(function (a, b) { return a.at < b.at ? -1 : 1; }).map(function (s) {
+      var sc = s.scores || {}, m = s.m;
+      return [s.riderId, s.at, s.vehicle, s.lang, s.mode, s.simulated, s.condition || '', s.verdict, s.index, sc.control, sc.reaction, sc.attention, sc.hazards, sc.rules, sc.cognition,
+        m.sdlp, m.drtRT, m.drtMissRate, m.brakeRT, m.controlLagMs, m.collisions, m.nearMisses, m.eyesOffMax, m.departures, m.answersCorrect, s.baseN, s.comp,
+        (s.reasons || []).map(function (r) { return L10N.t('en', r.key, r.params); }).join('; ')];
+    });
+    var csv = [cols].concat(rows).map(function (r) { return r.map(function (v) { v = v == null ? '' : String(v); return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; }).join(','); }).join('\n');
+    var a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' })); a.download = 'headcheck2_checks.csv';
+    document.body.appendChild(a); a.click(); setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+  };
+
+  // ---------------------------------------------------------------- tooltip + svg helpers
+  var tip = $('tip');
+  function showTip(html, e) { tip.innerHTML = html; tip.style.display = 'block'; moveTip(e); }
+  function moveTip(e) { var w = tip.offsetWidth, h = tip.offsetHeight, x = e.clientX + 14, y = e.clientY + 14; if (x + w > innerWidth - 8) x = e.clientX - w - 14; if (y + h > innerHeight - 8) y = e.clientY - h - 14; tip.style.left = x + 'px'; tip.style.top = y + 'px'; }
+  function hideTip() { tip.style.display = 'none'; }
+  function S(tag, attrs, parent) { var el = document.createElementNS(NS, tag); for (var k in attrs) el.setAttribute(k, attrs[k]); if (parent) parent.appendChild(el); return el; }
+  function niceTicks(lo, hi, n) {
+    var span = hi - lo || 1, step = Math.pow(10, Math.floor(Math.log10(span / n))), err = span / n / step;
+    step *= err >= 7.5 ? 10 : err >= 3.5 ? 5 : err >= 1.5 ? 2 : 1;
+    var t = [], v = Math.ceil(lo / step) * step; for (; v <= hi + 1e-9; v += step) t.push(Math.round(v * 1e6) / 1e6); return t;
+  }
+  // generic line chart with crosshair tooltip. o: {xs, series:[{ys, color, name}], yMin, yMax, refs, bands, marks, fmtX, tip, height, yLabel, xLabel}
+  function lineChart(host, o) {
+    host.innerHTML = '';
+    var W = Math.max(280, host.clientWidth), H = o.height || 190, ml = 44, mr = 14, mt = 10, mb = 30, pw = W - ml - mr, ph = H - mt - mb;
+    var svg = S('svg', { viewBox: '0 0 ' + W + ' ' + H, height: H, role: 'img', 'aria-label': o.aria || '' }, host);
+    var x0 = o.xs[0], x1 = o.xs[o.xs.length - 1] || 1, sx = function (v) { return ml + (v - x0) / ((x1 - x0) || 1) * pw; }, sy = function (v) { return mt + ph - (v - o.yMin) / (o.yMax - o.yMin) * ph; };
+    (o.bands || []).forEach(function (b) { S('rect', { x: sx(Math.max(x0, b[0])), y: mt, width: Math.max(1, sx(Math.min(x1, b[1])) - sx(Math.max(x0, b[0]))), height: ph, fill: 'var(--band)' }, svg); });
+    niceTicks(o.yMin, o.yMax, 4).forEach(function (t) {
+      S('line', { x1: ml, x2: ml + pw, y1: sy(t), y2: sy(t), stroke: 'var(--grid)', 'stroke-width': 1 }, svg);
+      S('text', { x: ml - 6, y: sy(t) + 4, 'text-anchor': 'end' }, svg).textContent = o.fmtY ? o.fmtY(t) : t;
+    });
+    niceTicks(x0, x1, Math.max(3, Math.floor(pw / 90))).forEach(function (t) { S('text', { x: sx(t), y: H - 10, 'text-anchor': 'middle' }, svg).textContent = o.fmtX ? o.fmtX(t) : t; });
+    if (o.yLabel) S('text', { x: ml, y: mt - 1, 'text-anchor': 'start', dy: '-0.2em' }, svg).textContent = '';
+    (o.refs || []).forEach(function (r) {
+      S('line', { x1: ml, x2: ml + pw, y1: sy(r.y), y2: sy(r.y), stroke: 'var(--ref)', 'stroke-width': 1, 'stroke-dasharray': '4 4' }, svg);
+      if (r.label) S('text', { x: ml + 4, y: sy(r.y) - 4, 'text-anchor': 'start' }, svg).textContent = r.label;
+    });
+    (o.marks || []).forEach(function (m) {
+      var x = sx(m.x); if (x < ml || x > ml + pw) return;
+      S('line', { x1: x, x2: x, y1: mt, y2: mt + ph, stroke: 'var(--ref)', 'stroke-width': 1, opacity: 0.45 }, svg);
+      var t = S('text', { x: x + 3, y: mt + 10 }, svg); t.textContent = m.label;
+    });
+    o.series.forEach(function (s) {
+      var d = ''; for (var i = 0; i < o.xs.length; i++) { if (s.ys[i] == null) continue; d += (d ? 'L' : 'M') + sx(o.xs[i]).toFixed(1) + ' ' + sy(Math.max(o.yMin, Math.min(o.yMax, s.ys[i]))).toFixed(1); }
+      S('path', { d: d, fill: 'none', stroke: s.color, 'stroke-width': 2, 'stroke-linejoin': 'round', 'stroke-linecap': 'round' }, svg);
+    });
+    var cross = S('line', { y1: mt, y2: mt + ph, stroke: 'var(--text-secondary)', 'stroke-width': 1, visibility: 'hidden' }, svg);
+    var dots = o.series.map(function (s) { return S('circle', { r: 4, fill: s.color, stroke: 'var(--surface-1)', 'stroke-width': 2, visibility: 'hidden' }, svg); });
+    var hit = S('rect', { x: ml, y: mt, width: pw, height: ph, fill: 'transparent' }, svg);
+    hit.addEventListener('pointermove', function (e) {
+      var rect = svg.getBoundingClientRect(), xv = x0 + ((e.clientX - rect.left) * W / rect.width - ml) / pw * (x1 - x0);
+      var lo = 0, hi = o.xs.length - 1; while (hi - lo > 1) { var mid = (lo + hi) >> 1; if (o.xs[mid] < xv) lo = mid; else hi = mid; }
+      var i = Math.abs(o.xs[lo] - xv) < Math.abs(o.xs[hi] - xv) ? lo : hi, X = sx(o.xs[i]);
+      cross.setAttribute('x1', X); cross.setAttribute('x2', X); cross.setAttribute('visibility', 'visible');
+      o.series.forEach(function (s, k) { if (s.ys[i] == null) return; dots[k].setAttribute('cx', X); dots[k].setAttribute('cy', sy(Math.max(o.yMin, Math.min(o.yMax, s.ys[i])))); dots[k].setAttribute('visibility', 'visible'); });
+      showTip(o.tip(i), e);
+    });
+    hit.addEventListener('pointerleave', function () { cross.setAttribute('visibility', 'hidden'); dots.forEach(function (d) { d.setAttribute('visibility', 'hidden'); }); hideTip(); });
+    return svg;
+  }
+
+  // ---------------------------------------------------------------- render
+  function latestByRider() {
+    var by = {};
+    store.sessions.forEach(function (s) { if (!by[s.riderId] || s.at > by[s.riderId].at) by[s.riderId] = s; });
+    return Object.keys(by).map(function (k) { return by[k]; }).sort(function (a, b) { var o = { NOT_FIT: 0, CAUTION: 1, INVALID: 2, FIT: 3 }; return o[a.verdict] - o[b.verdict] || (a.at < b.at ? 1 : -1); });
+  }
+  function render() {
+    var all = store.sessions, checks = all.filter(function (s) { return s.mode !== 'practice'; });
+    var today = new Date().toDateString(), tday = checks.filter(function (s) { return new Date(s.at).toDateString() === today; });
+    var cnt = function (arr, v) { return arr.filter(function (s) { return s.verdict === v; }).length; };
+    var src = tday.length ? tday : checks, scope = tday.length ? 'today' : 'all checks';
+    $('tiles').innerHTML = [
+      ['Checks ' + scope, src.length, (checks.length - src.length ? checks.length + ' in total' : 'riders: ' + latestByRider().length)],
+      [status('FIT'), cnt(src, 'FIT'), pct(cnt(src, 'FIT'), src.length)],
+      [status('CAUTION'), cnt(src, 'CAUTION'), pct(cnt(src, 'CAUTION'), src.length)],
+      [status('NOT_FIT'), cnt(src, 'NOT_FIT'), pct(cnt(src, 'NOT_FIT'), src.length)],
+      [status('INVALID'), cnt(src, 'INVALID'), pct(cnt(src, 'INVALID'), src.length)]
+    ].map(function (t) { return '<div class="tile"><div class="k">' + t[0] + '</div><div class="v">' + t[1] + '</div><div class="s">' + t[2] + '</div></div>'; }).join('');
+    var latest = latestByRider();
+    $('ridersEmpty').style.display = latest.length ? 'none' : 'block';
+    $('riders').innerHTML = latest.map(function (s) {
+      return '<tr class="click' + (s.riderId === sel.rider ? ' sel' : '') + '" data-r="' + esc(s.riderId) + '"><td><b class="nw">' + esc(s.riderId) + '</b>' + (s.simulated ? '<br><span class="badge" style="margin-left:0">simulated</span>' : '') +
+        '</td><td><span class="nw">' + fmtDate(s.at) + '</span><br><span class="tm">' + new Date(s.at).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' }) + '</span></td><td>' + status(s.verdict) + '</td><td class="n">' + (s.index == null ? '–' : s.index) + '</td><td class="n">' + (s.baseReady ? 'ready' : Math.min(3, s.baseN) + '/3') + '</td></tr>';
+    }).join('');
+    Array.prototype.forEach.call($('riders').querySelectorAll('tr'), function (tr) { tr.onclick = function () { sel.rider = tr.getAttribute('data-r'); sel.session = null; render(); }; });
+    if (!sel.rider && latest.length) sel.rider = latest[0].riderId;
+    renderDetail();
+  }
+  function pct(a, b) { return b ? Math.round(100 * a / b) + '% of checks' : '–'; }
+
+  function renderDetail() {
+    var host = $('detail');
+    var list = store.sessions.filter(function (s) { return s.riderId === sel.rider; }).sort(function (a, b) { return a.at < b.at ? -1 : 1; });
+    if (!list.length) { host.innerHTML = '<div class="empty">Select a rider.</div>'; return; }
+    var s = list.filter(function (x) { return x.id === sel.session; })[0] || list[list.length - 1];
+    sel.session = s.id;
+    host.innerHTML = '<h2>' + esc(s.riderId) + (s.simulated ? '<span class="badge">simulated</span>' : '') + '</h2>' +
+      '<p class="sub">' + list.length + ' checks · ' + (s.vehicle === 'auto' ? 'auto-rickshaw' : 'two-wheeler') + ' · ' + esc((L10N.T[s.lang] || {})._name || s.lang) + '</p>' +
+      '<div class="legend"><span><b style="background:var(--series-1)"></b>Fitness index</span><span><b style="background:var(--ref)"></b>Thresholds</span></div><div class="chart" id="cIdx"></div>' +
+      '<div class="row" style="margin-top:10px"><label class="sub" style="margin:0" for="sessSel">Check</label><select id="sessSel">' + list.slice().reverse().map(function (x) {
+        return '<option value="' + esc(x.id) + '"' + (x.id === s.id ? ' selected' : '') + '>' + fmtDate(x.at, true) + ' · ' + VLABEL[x.verdict] + (x.condition && x.simulated ? ' (' + x.condition + ')' : '') + '</option>'; }).join('') + '</select>' + status(s.verdict) + '</div>' +
+      '<ul class="reasons">' + (s.reasons || []).map(function (r) { return '<li>' + esc(L10N.t('en', r.key, r.params)) + '</li>'; }).join('') + '</ul>' +
+      '<div id="traces"></div><div class="tbl-wrap"><table id="mtab" style="margin-top:10px"></table></div>';
+    $('sessSel').onchange = function () { sel.session = this.value; renderDetail(); };
+    // index history
+    var hostIdx = $('cIdx'), xs = list.map(function (x, i) { return i; });
+    lineChart(hostIdx, { xs: xs.length > 1 ? xs : [0, 1], series: [{ ys: list.map(function (x) { return x.index; }), color: 'var(--series-1)' }], yMin: 0, yMax: 100, height: 170,
+      refs: [{ y: 68, label: 'Take a break below 68' }, { y: 50, label: 'Not fit below 50' }], fmtX: function (t) { var x = list[Math.round(t)]; return x && Math.abs(t - Math.round(t)) < 1e-6 ? fmtDate(x.at) : ''; },
+      tip: function (i) { var x = list[i]; return x ? '<b>' + fmtDate(x.at, true) + '</b><br>' + status(x.verdict) + '<br>Index ' + (x.index == null ? '–' : x.index) + (x.comp != null ? '<br>Change vs normal ' + x.comp : '') : ''; },
+      aria: 'Fitness index for each check' });
+    var svg = hostIdx.querySelector('svg'), W = svg.viewBox.baseVal.width, pw = W - 58;
+    list.forEach(function (x, i) {                          // per-check dots (also clickable)
+      if (x.index == null) return;
+      var cx = 44 + (list.length > 1 ? i / (list.length - 1) : 0) * pw, cy = 10 + (100 - x.index) / 100 * 130;
+      var c = S('circle', { cx: cx, cy: cy, r: x.id === s.id ? 6 : 4.5, fill: 'var(--series-1)', stroke: 'var(--surface-1)', 'stroke-width': 2, style: 'cursor:pointer' }, svg);
+      c.addEventListener('click', function () { sel.session = x.id; renderDetail(); });
+    });
+    renderTraces(s, list);
+  }
+
+  function renderTraces(s, list) {
+    var host = $('traces'), data = full[s.id];
+    var m = s.m, base = list.filter(function (x) { return x.at < s.at && x.verdict === 'FIT' && x.mode !== 'practice' && !(x.invalid || []).length; }).slice(-10);
+    var med = function (k) { var v = base.map(function (x) { return x.m[k]; }).filter(function (v) { return v != null; }).sort(function (a, b) { return a - b; }); return v.length >= 3 ? v[Math.floor(v.length / 2)] : null; };
+    var rows = [['Lane weaving (SDLP)', 'sdlp', function (v) { return Math.round(v * 100) + ' cm'; }], ['Red-light reaction', 'drtRT', function (v) { return Math.round(v) + ' ms'; }],
+      ['Red lights missed', 'drtMissRate', function (v) { return Math.round(v * 100) + '%'; }], ['Brake reaction', 'brakeRT', function (v) { return v.toFixed(2) + ' s'; }],
+      ['Steering control lag', 'controlLagMs', function (v) { return Math.round(v) + ' ms'; }], ['Collisions', 'collisions', String], ['Near misses', 'nearMisses', String],
+      ['Longest look away', 'eyesOffMax', function (v) { return v + ' s'; }], ['Questions right', 'answersCorrect', function (v) { return v + ' / ' + (m.answersN || 3); }]];
+    $('mtab').innerHTML = '<thead><tr><th>Measure</th><th class="n">This check</th><th class="n">Rider\'s normal</th></tr></thead><tbody>' + rows.map(function (r) {
+      var v = m[r[1]], b = med(r[1]);
+      return '<tr><td>' + r[0] + '</td><td class="n">' + (v == null ? '–' : r[2](v)) + '</td><td class="n">' + (b == null ? '–' : r[2](b)) + '</td></tr>';
+    }).join('') + '</tbody>';
+    if (!data) { host.innerHTML = '<p class="note">Import this check\'s result file to see the ride traces.</p>'; return; }
+    var L = data.log, step = 2, xs = [], ys = [], vs = [];
+    for (var i = 0; i < L.t.length; i += step) { xs.push(L.t[i]); ys.push(L.y[i]); vs.push(L.v[i] * 3.6); }
+    var bands = [], on = null;
+    for (var j = 0; j < L.t.length; j++) { if (L.brk[j] > 0.05 && on == null) on = L.t[j]; if ((L.brk[j] <= 0.05 || j === L.t.length - 1) && on != null) { bands.push([on, L.t[j]]); on = null; } }
+    var ABBR = { jaywalker: 'Ped', lead_stop: 'Auto', pothole: 'Hole', pothole_hidden: 'Puddle', breaker: 'Bump', wrong_side: 'Wrong side', sharp_turn: 'Turn', ambulance: 'Siren', school_zone: 'School', lane_change: 'Truck', animal: 'Animal' };
+    var marks = (data.events || []).filter(function (e) { return e.onsetT != null; }).map(function (e) { return { x: e.onsetT, label: ABBR[e.kind] || e.kind }; });
+    host.innerHTML = '<h2 style="margin-top:14px">Ride traces</h2><p class="sub">Hover for values. Vertical lines mark when each hazard appeared.</p>' +
+      '<div class="legend"><span><b style="background:var(--series-1)"></b>Position in lane (m, + = right)</span><span><b style="background:var(--ref)"></b>Lane-departure limits</span></div><div class="chart" id="cLane"></div>' +
+      '<div class="legend" style="margin-top:8px"><span><b style="background:var(--series-1)"></b>Speed (km/h)</span><span><b class="area" style="background:var(--band)"></b>Brake held</span></div><div class="chart" id="cSpeed"></div>' +
+      '<div class="legend" style="margin-top:8px"><span><b class="dot" style="background:var(--series-1)"></b>Red-light reaction (ms)</span><span><b class="dot" style="background:var(--series-2)"></b>Missed light</span></div><div class="chart" id="cDrt"></div>';
+    var fmtS = function (t) { return Math.round(t) + ' s'; };
+    lineChart($('cLane'), { xs: xs, series: [{ ys: ys, color: 'var(--series-1)' }], yMin: -2.2, yMax: 2.2, height: 170, marks: marks, fmtX: fmtS, fmtY: function (t) { return t.toFixed(1); },
+      refs: [{ y: 1.55 }, { y: -1.55 }, { y: 0 }], tip: function (i) { return '<b>' + xs[i].toFixed(1) + ' s</b><br>Lane position ' + ys[i].toFixed(2) + ' m'; }, aria: 'Lateral lane position over the ride' });
+    lineChart($('cSpeed'), { xs: xs, series: [{ ys: vs, color: 'var(--series-1)' }], yMin: 0, yMax: 45, height: 150, bands: bands, marks: marks, fmtX: fmtS,
+      tip: function (i) { return '<b>' + xs[i].toFixed(1) + ' s</b><br>Speed ' + Math.round(vs[i]) + ' km/h'; }, aria: 'Speed over the ride with braking shaded' });
+    drtChart($('cDrt'), data.drt || [], xs[xs.length - 1]);
+  }
+  function drtChart(host, drt, tEnd) {
+    host.innerHTML = '';
+    var W = Math.max(280, host.clientWidth), H = 168, ml = 50, mr = 14, lane = 30, mt = 8 + lane, mb = 30, pw = W - ml - mr, ph = H - mt - mb, yMax = 2000;
+    var svg = S('svg', { viewBox: '0 0 ' + W + ' ' + H, height: H, role: 'img', 'aria-label': 'Reaction time to each red light, misses on the top row' }, host);
+    var sx = function (t) { return ml + t / (tEnd || 1) * pw; }, sy = function (v) { return mt + ph - Math.min(v, yMax) / yMax * ph; };
+    S('text', { x: ml - 6, y: 8 + lane / 2 + 4, 'text-anchor': 'end' }, svg).textContent = 'missed';
+    S('line', { x1: ml, x2: ml + pw, y1: 8 + lane / 2, y2: 8 + lane / 2, stroke: 'var(--grid)', 'stroke-dasharray': '2 4' }, svg);
+    niceTicks(0, yMax, 4).forEach(function (t) { S('line', { x1: ml, x2: ml + pw, y1: sy(t), y2: sy(t), stroke: 'var(--grid)' }, svg); S('text', { x: ml - 6, y: sy(t) + 4, 'text-anchor': 'end' }, svg).textContent = t; });
+    niceTicks(0, tEnd, Math.max(3, Math.floor(pw / 90))).forEach(function (t) { S('text', { x: sx(t), y: H - 10, 'text-anchor': 'middle' }, svg).textContent = Math.round(t) + ' s'; });
+    drt.forEach(function (d) {
+      var miss = d.outcome !== 'hit', y = miss ? 8 + lane / 2 : sy(d.rt * 1000);
+      S('circle', { cx: sx(d.onset), cy: y, r: 5, fill: miss ? 'var(--series-2)' : 'var(--series-1)', stroke: 'var(--surface-1)', 'stroke-width': 2 }, svg);
+      var h = S('circle', { cx: sx(d.onset), cy: y, r: 11, fill: 'transparent' }, svg);
+      h.addEventListener('pointerenter', function (e) { showTip('<b>Light at ' + d.onset.toFixed(1) + ' s</b><br>' + (miss ? (d.outcome === 'anticipation' ? 'Pressed too early' : 'Missed') : 'Reaction ' + Math.round(d.rt * 1000) + ' ms'), e); });
+      h.addEventListener('pointermove', moveTip); h.addEventListener('pointerleave', hideTip);
+    });
+  }
+
+  // ---------------------------------------------------------------- synthetic cohort validation
+  var cohort = null;
+  $('btnCohort').onclick = function () {
+    var btn = this; btn.disabled = true; cohort = [];
+    var plan = [];
+    for (var r = 0; r < 12; r++) {
+      var traits = { rt: 0.85 + ((r * 37) % 30) / 100, noise: 0.85 + ((r * 53) % 30) / 100 };          // riders differ in skill
+      for (var b = 0; b < 3; b++) plan.push({ r: r, cond: 'rested', baseline: true, seed: 50000 + r * 100 + b, traits: traits });
+      COND.forEach(function (c, k) { plan.push({ r: r, cond: c, baseline: false, seed: 50000 + r * 100 + 10 + k, traits: traits }); });
+    }
+    var hist = {}, i = 0, t0 = Date.now();
+    (function step() {
+      if (i >= plan.length) { btn.disabled = false; $('cohortStatus').textContent = plan.length + ' rides simulated in ' + ((Date.now() - t0) / 1000).toFixed(1) + ' s'; renderCohort(); return; }
+      var p = plan[i++], data = HC.runSession({ seed: p.seed, bot: p.cond, traits: p.traits, riderId: 'SYN-' + p.r });
+      var A = HC.assess(data, hist[p.r] || []);
+      if (p.baseline) (hist[p.r] = hist[p.r] || []).push(A.summary);
+      else cohort.push({ cond: p.cond, verdict: A.verdict, index: A.index, comp: A.baseline.composite, coll: A.metrics.collisions, miss: A.metrics.drtMissRate, invalid: A.invalid.length > 0 });
+      $('cohortBar').style.width = (100 * i / plan.length) + '%'; $('cohortStatus').textContent = 'Simulating ride ' + i + ' of ' + plan.length + '…';
+      setTimeout(step, 0);
+    })();
+  };
+  // what-if: same gates as the engine (collisions, missed lights, change vs own normal) with adjustable index cut-offs
+  function whatIf(c, cutNF, cutC, zNF, zC) {
+    if (c.invalid) return 'INVALID';
+    var lv = 0;
+    if (c.coll >= 2) lv = 2; else if (c.coll === 1) lv = Math.max(lv, 1);
+    if (c.miss != null && c.miss >= 0.40) lv = 2; else if (c.miss != null && c.miss >= 0.22) lv = Math.max(lv, 1);
+    if (c.index != null && c.index < cutNF) lv = 2; else if (c.index != null && c.index < cutC) lv = Math.max(lv, 1);
+    if (c.comp != null) { if (c.comp >= zNF) lv = 2; else if (c.comp >= zC) lv = Math.max(lv, 1); }
+    return ['FIT', 'CAUTION', 'NOT_FIT'][lv];
+  }
+  function renderCohort() {
+    if (!cohort || !cohort.length) return;
+    var host = $('cohort');
+    host.innerHTML = '<div class="sliders">' +
+      '<label>Not fit if index below <b id="vNF">50</b><input type="range" id="sNF" min="30" max="80" value="50"></label>' +
+      '<label>Take a break if index below <b id="vC">68</b><input type="range" id="sC" min="50" max="95" value="68"></label>' +
+      '<label>Not fit if change vs own normal ≥ <b id="vZN">3.2</b><input type="range" id="sZN" min="20" max="50" value="32"></label>' +
+      '<label>Take a break if change ≥ <b id="vZC">2.0</b><input type="range" id="sZC" min="10" max="35" value="20"></label></div>' +
+      '<div class="kpi" id="ckpi"></div><div class="tbl-wrap"><table class="cm" id="cm" style="margin-top:8px"></table></div>' +
+      '<div class="legend" style="margin-top:12px"><span>' + status('FIT') + '</span><span>' + status('CAUTION') + '</span><span>' + status('NOT_FIT') + '</span><span><b style="background:var(--ref)"></b>Index thresholds</span></div><div class="chart" id="cStrip"></div>' +
+      '<p class="note">Defaults are the engine\'s thresholds. Moving a slider shows the trade-off between missing an unfit rider and stopping a fit one; on real data this is where a pilot sets the cut-offs.</p>';
+    ['sNF', 'sC', 'sZN', 'sZC'].forEach(function (id) { $(id).oninput = update; });
+    update();
+    function update() {
+      var cutNF = +$('sNF').value, cutC = Math.max(+$('sC').value, cutNF), zNF = +$('sZN').value / 10, zC = Math.min(+$('sZC').value / 10, zNF);
+      $('vNF').textContent = cutNF; $('vC').textContent = cutC; $('vZN').textContent = zNF.toFixed(1); $('vZC').textContent = zC.toFixed(1);
+      var V = ['FIT', 'CAUTION', 'NOT_FIT', 'INVALID'], tab = {};
+      COND.forEach(function (c) { tab[c] = { FIT: 0, CAUTION: 0, NOT_FIT: 0, INVALID: 0, n: 0 }; });
+      cohort.forEach(function (c) { c.wi = whatIf(c, cutNF, cutC, zNF, zC); tab[c.cond][c.wi]++; tab[c.cond].n++; });
+      var flagged = function (c) { return tab[c].CAUTION + tab[c].NOT_FIT; };
+      var spec = tab.rested.n ? Math.round(100 * tab.rested.FIT / tab.rested.n) : 0;
+      var sensT = Math.round(100 * (flagged('tired') + flagged('impaired')) / ((tab.tired.n + tab.impaired.n) || 1));
+      var sensI = Math.round(100 * tab.impaired.NOT_FIT / (tab.impaired.n || 1));
+      $('ckpi').innerHTML = '<span>Rested riders cleared<br><b>' + spec + '%</b></span><span>Tired or impaired riders flagged<br><b>' + sensT + '%</b></span><span>Impaired riders stopped (not fit)<br><b>' + sensI + '%</b></span>';
+      $('cm').innerHTML = '<thead><tr><th>Simulated condition</th>' + V.map(function (v) { return '<th class="n">' + status(v) + '</th>'; }).join('') + '</tr></thead><tbody>' +
+        COND.map(function (c) { var row = tab[c], best = V.reduce(function (a, v) { return row[v] > row[a] ? v : a; }, 'FIT');
+          return '<tr><td>' + c[0].toUpperCase() + c.slice(1) + '</td>' + V.map(function (v) { return '<td class="n' + (v === best && row[v] ? ' hi' : '') + '">' + row[v] + '</td>'; }).join('') + '</tr>'; }).join('') + '</tbody>';
+      strip($('cStrip'), cutNF, cutC);
+    }
+  }
+  function strip(host, cutNF, cutC) {
+    host.innerHTML = '';
+    var W = Math.max(280, host.clientWidth), H = 220, ml = 44, mr = 14, mt = 10, mb = 30, pw = W - ml - mr, ph = H - mt - mb;
+    var svg = S('svg', { viewBox: '0 0 ' + W + ' ' + H, height: H, role: 'img', 'aria-label': 'Fitness index of each synthetic ride by condition' }, host);
+    var sy = function (v) { return mt + ph - v / 100 * ph; }, cw = pw / COND.length, FILL = { FIT: 'var(--good)', CAUTION: 'var(--warning)', NOT_FIT: 'var(--critical)', INVALID: 'var(--neutral)' };
+    niceTicks(0, 100, 4).forEach(function (t) { S('line', { x1: ml, x2: ml + pw, y1: sy(t), y2: sy(t), stroke: 'var(--grid)' }, svg); S('text', { x: ml - 6, y: sy(t) + 4, 'text-anchor': 'end' }, svg).textContent = t; });
+    [[cutC, 'Take a break below ' + cutC], [cutNF, 'Not fit below ' + cutNF]].forEach(function (r) {
+      S('line', { x1: ml, x2: ml + pw, y1: sy(r[0]), y2: sy(r[0]), stroke: 'var(--ref)', 'stroke-dasharray': '4 4' }, svg);
+      S('text', { x: ml + 4, y: sy(r[0]) - 4, 'text-anchor': 'start' }, svg).textContent = r[1];
+    });
+    COND.forEach(function (c, k) {
+      S('text', { x: ml + cw * (k + 0.5), y: H - 10, 'text-anchor': 'middle' }, svg).textContent = c[0].toUpperCase() + c.slice(1);
+      cohort.filter(function (x) { return x.cond === c; }).forEach(function (x, j) {
+        if (x.index == null) return;
+        var cx = ml + cw * (k + 0.5) + ((j * 0.618) % 1 - 0.5) * cw * 0.5, cy = sy(x.index), v = x.wi;
+        var g = S('g', {}, svg);
+        if (v === 'NOT_FIT') { S('path', { d: 'M' + (cx - 4) + ' ' + (cy - 4) + 'L' + (cx + 4) + ' ' + (cy + 4) + 'M' + (cx + 4) + ' ' + (cy - 4) + 'L' + (cx - 4) + ' ' + (cy + 4), stroke: FILL[v], 'stroke-width': 2.5, 'stroke-linecap': 'round' }, g); }
+        else if (v === 'CAUTION') S('path', { d: 'M' + cx + ' ' + (cy - 5.5) + 'L' + (cx + 5) + ' ' + (cy + 4) + 'L' + (cx - 5) + ' ' + (cy + 4) + 'Z', fill: FILL[v], stroke: 'var(--surface-1)', 'stroke-width': 1.5 }, g);
+        else S('circle', { cx: cx, cy: cy, r: 4.5, fill: FILL[v], stroke: 'var(--surface-1)', 'stroke-width': 1.5 }, g);
+        var h = S('circle', { cx: cx, cy: cy, r: 9, fill: 'transparent' }, g);
+        h.addEventListener('pointerenter', function (e) { showTip('<b>' + c + ' ride</b><br>' + status(v) + '<br>Index ' + x.index + (x.comp != null ? '<br>Change vs own normal ' + x.comp : '') + (x.coll ? '<br>Collisions ' + x.coll : ''), e); });
+        h.addEventListener('pointermove', moveTip); h.addEventListener('pointerleave', hideTip);
       });
     });
-    el('line', { x1: L, x2: W - R, y1: H - Bm, y2: H - Bm, stroke: 'var(--axis)', 'stroke-width': 1 }, svg);
   }
 
-  function renderTimeline() {
-    var svg = $('tl'); clear(svg);
-    var r = rows.filter(function (x) { return key(x) === selected; })[0];
-    if (!r) return;
-    var thr = r.settingsUsed.checkDeg;
-    $('tlTitle').textContent = 'Head movement – ' + r.riderId + (r.simulated ? ' (simulated)' : '');
-    $('tlSub').textContent = r.group + ' · score ' + r.scores.overall + ' · ' + r.scores.checksDone + '/' + r.scores.checksExpected + ' checks · ' + r.scores.hazardsSpotted + '/' + r.scores.hazardsTotal + ' hazards';
-    var W = svg.clientWidth || 900, H = 300, L = 46, R = 16, T = 26, B = 30;
-    svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
-    var tMax = r.series.t[r.series.t.length - 1] || 1;
-    var x = function (t) { return L + t / tMax * (W - L - R); }, y = function (v) { return T + (120 - v) / 240 * (H - T - B); };
-    // manoeuvre windows
-    r.manoeuvres.forEach(function (m) {
-      if (m.promptT == null || m.actionT == null) return;
-      var right = m.side === 'right';
-      el('rect', { x: x(m.promptT), y: T, width: Math.max(1, x(m.actionT) - x(m.promptT)), height: H - T - B,
-        fill: right ? 'var(--band-fill)' : 'var(--band-fill-l)' }, svg);
-      el('text', { x: (x(m.promptT) + x(m.actionT)) / 2, y: T - 8, 'text-anchor': 'middle', 'font-size': 11,
-        fill: m.checked ? 'var(--good)' : 'var(--bad)', 'font-weight': 600 }, svg, m.id + (right ? ' →' : ' ←') + (m.checked ? ' ✓' : ' ✕'));
-    });
-    [-120, -60, 0, 60, 120].forEach(function (v) {
-      el('line', { x1: L, x2: W - R, y1: y(v), y2: y(v), stroke: v === 0 ? 'var(--axis)' : 'var(--grid)', 'stroke-width': 1 }, svg);
-      el('text', { x: L - 8, y: y(v) + 4, 'text-anchor': 'end', 'font-size': 11, fill: 'var(--text-secondary)' }, svg, (v > 0 ? '+' : '') + v + '°');
-    });
-    [thr, -thr].forEach(function (v) {
-      el('line', { x1: L, x2: W - R, y1: y(v), y2: y(v), stroke: 'var(--text-secondary)', 'stroke-width': 1, 'stroke-dasharray': '4 4' }, svg);
-    });
-    el('text', { x: W - R, y: y(thr) - 5, 'text-anchor': 'end', 'font-size': 11, fill: 'var(--text-secondary)' }, svg, 'check threshold ±' + thr + '°');
-    niceTicks(0, tMax, 8).forEach(function (t) {
-      el('text', { x: x(t), y: H - B + 18, 'text-anchor': 'middle', 'font-size': 11, fill: 'var(--text-secondary)' }, svg, t + ' s');
-    });
-    // yaw line
-    var d = '';
-    for (var i = 0; i < r.series.t.length; i += 2) {
-      var v = Math.max(-120, Math.min(120, r.series.yaw[i]));
-      d += (i ? 'L' : 'M') + x(r.series.t[i]).toFixed(1) + ' ' + y(v).toFixed(1);
-    }
-    el('path', { d: d, fill: 'none', stroke: 'var(--series-1)', 'stroke-width': 2, 'stroke-linejoin': 'round' }, svg);
-    // hazards + taps
-    r.hazards.forEach(function (h) {
-      if (h.onsetT == null) return;
-      el('path', { d: 'M' + x(h.onsetT) + ' ' + (H - B) + 'l-5 9h10z', fill: h.responded ? 'var(--good)' : 'var(--bad)' }, svg);
-    });
-    (r.taps || []).forEach(function (t) {
-      el('circle', { cx: x(t), cy: H - B - 6, r: 4, fill: 'var(--text-primary)', stroke: 'var(--surface-1)', 'stroke-width': 2 }, svg);
-    });
-    // crosshair hover
-    var cross = el('line', { x1: 0, x2: 0, y1: T, y2: H - B, stroke: 'var(--text-secondary)', 'stroke-width': 1, visibility: 'hidden' }, svg);
-    var dot = el('circle', { r: 4.5, fill: 'var(--series-1)', stroke: 'var(--surface-1)', 'stroke-width': 2, visibility: 'hidden' }, svg);
-    var hit = el('rect', { x: L, y: T, width: W - L - R, height: H - T - B, fill: 'transparent' }, svg);
-    hit.addEventListener('mousemove', function (ev) {
-      var box = svg.getBoundingClientRect(), px = (ev.clientX - box.left) * (W / box.width);
-      var t = Math.max(0, Math.min(tMax, (px - L) / (W - L - R) * tMax));
-      var idx = Math.min(r.series.t.length - 1, Math.round(t * (r.settings.sampleHz || 20)));
-      while (idx > 0 && r.series.t[idx] > t) idx--;
-      var v = r.series.yaw[idx], xv = x(r.series.t[idx]);
-      cross.setAttribute('x1', xv); cross.setAttribute('x2', xv); cross.setAttribute('visibility', 'visible');
-      dot.setAttribute('cx', xv); dot.setAttribute('cy', y(Math.max(-120, Math.min(120, v)))); dot.setAttribute('visibility', 'visible');
-      var inWin = r.manoeuvres.filter(function (m) { return t >= m.promptT && t <= m.actionT; })[0];
-      var hz = r.hazards.filter(function (h) { return t >= h.onsetT && t <= h.onsetT + 4; })[0];
-      showTip('<b>' + r.series.t[idx].toFixed(1) + ' s</b><br>Head: <b>' + Math.abs(v).toFixed(0) + '° ' + (v > 1 ? 'right' : v < -1 ? 'left' : 'ahead') + '</b>' +
-        (inWin ? '<br>' + inWin.label + ' – ' + (inWin.checked ? 'checked ' + inWin.leadTimeS.toFixed(1) + ' s early' : 'no check') : '') +
-        (hz ? '<br>Hazard: ' + hz.label : ''), ev);
-    });
-    hit.addEventListener('mouseleave', function () { hideTip(); cross.setAttribute('visibility', 'hidden'); dot.setAttribute('visibility', 'hidden'); });
-  }
-
-  function renderTable() {
-    var tb = $('rows'); tb.innerHTML = '';
-    rows.forEach(function (r) {
-      var s = r.scores, b = HC.bandFor(s.overall), icon = b.key === 'safe' ? '✓' : b.key === 'coach' ? '!' : '✕';
-      var tr = document.createElement('tr');
-      if (key(r) === selected) tr.className = 'sel';
-      tr.innerHTML = '<td><b>' + esc(r.riderId) + '</b>' + (r.simulated ? '<span class="sim">SIM</span>' : '') + '</td>' +
-        '<td><span class="swatch" style="background:' + GCOL[groupIdx(r)] + '"></span>' + esc(r.group) + '</td>' +
-        '<td class="n"><b>' + s.overall + '</b></td>' +
-        '<td><span class="pill ' + b.key + '">' + icon + ' ' + b.label + '</span></td>' +
-        '<td class="n">' + s.checksDone + '/' + s.checksExpected + '</td>' +
-        '<td class="n">' + s.nearMisses + '</td>' +
-        '<td class="n">' + s.hazardsSpotted + '/' + s.hazardsTotal + '</td>' +
-        '<td class="n">' + (s.meanTapRtMs != null ? (s.meanTapRtMs / 1000).toFixed(2) + ' s' : '–') + '</td>' +
-        '<td class="n">' + (s.hornLookMs != null ? (s.hornLookMs / 1000).toFixed(2) + ' s' : '–') + '</td>' +
-        '<td class="n">' + s.falseTaps + '</td>';
-      tr.onclick = function () { selected = key(r); render(); };
-      tb.appendChild(tr);
-    });
-    $('method').textContent = 'Score = 50% shoulder checks + 50% hazards spotted − 5 per false tap. A shoulder check = head turned ≥ ' + $('thr').value +
-      '° toward the manoeuvre side for ≥ 0.1 s between the voice prompt and the manoeuvre. Moving the threshold slider re-scores every rider, which shows how robust the group difference is.';
-  }
-  function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
-
-  // ------------------------------------------------------------ CSV export
-  $('csv').onclick = function () {
-    if (!rows.length) return;
-    var head = ['riderId', 'group', 'yearsRiding', 'simulated', 'startedAt', 'mode', 'thresholdDeg', 'overall', 'band', 'checksDone', 'checksExpected',
-      'nearMisses', 'meanCheckLeadS', 'hazardsSpotted', 'hazardsTotal', 'meanTapRtMs', 'hornLookMs', 'falseTaps', 'yawSD', 'pctTimeLookingAway30']
-      .concat(rows[0].manoeuvres.map(function (m) { return m.id + '_checked'; }))
-      .concat(rows[0].hazards.map(function (h) { return h.id + '_rtMs'; }));
-    var lines = [head.join(',')];
-    rows.forEach(function (r) {
-      var s = r.scores;
-      var vals = [r.riderId, r.group, r.yearsRiding, !!r.simulated, r.startedAt, r.mode, r.settingsUsed.checkDeg, s.overall, s.band, s.checksDone, s.checksExpected,
-        s.nearMisses, s.meanCheckLeadS, s.hazardsSpotted, s.hazardsTotal, s.meanTapRtMs, s.hornLookMs, s.falseTaps, r.scan.yawSD, r.scan.pctTimeLookingAway30]
-        .concat(r.manoeuvres.map(function (m) { return m.checked ? 1 : 0; }))
-        .concat(r.hazards.map(function (h) { return h.rtMs; }));
-      lines.push(vals.map(function (v) { v = v == null ? '' : String(v); return /[",]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; }).join(','));
-    });
-    var a = document.createElement('a');
-    a.href = URL.createObjectURL(new Blob([lines.join('\n')], { type: 'text/csv' }));
-    a.download = 'headcheck_results.csv'; document.body.appendChild(a); a.click();
-    setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
-  };
-
-  window.addEventListener('resize', function () { if (rows.length) { renderDots(); renderTimeline(); } });
+  var rz; window.addEventListener('resize', function () { clearTimeout(rz); rz = setTimeout(function () { renderDetail(); if (cohort && cohort.length && $('sNF')) $('sNF').oninput(); }, 150); });
+  window.__DASH = { store: function () { return store; }, full: full, sel: sel };
   render();
 })();
 </script>
